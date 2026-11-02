@@ -5,9 +5,11 @@ struct HistoryView: View {
 
     var body: some View {
         HSplitView {
-            List(model.commits, selection: $model.selectedCommitID) { commit in
-                CommitRow(commit: commit)
+            List(selection: $model.selectedCommitID) {
+                ForEach(Array(model.commits.enumerated()), id: \.element.id) { index, commit in
+                CommitRow(commit: commit, graph: index < model.graph.count ? model.graph[index] : nil)
                     .tag(commit.id)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 8))
                     .contextMenu {
                         Button("Copy SHA") { copy(commit.sha) }
                         if let web = model.primaryRemote?.webURL {
@@ -16,6 +18,18 @@ struct HistoryView: View {
                             }
                         }
                     }
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack {
+                    Toggle("All branches", isOn: $model.showAllBranches)
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                    Spacer()
+                    Text("\(model.commits.count) commits").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(.bar)
             }
             .overlay {
                 if model.commits.isEmpty {
@@ -77,8 +91,19 @@ struct HistoryView: View {
 
 private struct CommitRow: View {
     let commit: Commit
+    let graph: GraphRow?
 
     var body: some View {
+        HStack(spacing: 6) {
+            if let graph {
+                GraphCell(row: graph, isMerge: commit.parents.count > 1)
+            }
+            details
+        }
+        .frame(height: 44)
+    }
+
+    private var details: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 ForEach(commit.refs.prefix(3), id: \.self) { ref in
@@ -101,6 +126,53 @@ private struct CommitRow: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 2)
     }
+}
+
+/// Draws one row of the commit graph; lines reach the row edges so rows join up.
+private struct GraphCell: View {
+    let row: GraphRow
+    let isMerge: Bool
+
+    nonisolated static let laneWidth: CGFloat = 14
+    nonisolated static let palette: [Color] = [.blue, .orange, .green, .purple, .pink, .teal, .red, .yellow, .indigo, .mint]
+
+    var body: some View {
+        Canvas { context, size in
+            func x(_ column: Int) -> CGFloat { CGFloat(column) * Self.laneWidth + Self.laneWidth / 2 }
+            func y(_ end: GraphLine.End) -> CGFloat {
+                switch end {
+                case .top: 0
+                case .middle: size.height / 2
+                case .bottom: size.height
+                }
+            }
+            for line in row.lines {
+                var path = Path()
+                let start = CGPoint(x: x(line.fromColumn), y: y(line.from))
+                let end = CGPoint(x: x(line.toColumn), y: y(line.to))
+                path.move(to: start)
+                if start.x == end.x {
+                    path.addLine(to: end)
+                } else {
+                    let midY = (start.y + end.y) / 2
+                    path.addCurve(to: end, control1: CGPoint(x: start.x, y: midY), control2: CGPoint(x: end.x, y: midY))
+                }
+                let colorColumn = line.from == .top ? line.fromColumn : line.toColumn
+                context.stroke(path, with: .color(Self.color(colorColumn)), lineWidth: 2)
+            }
+            let center = CGPoint(x: x(row.column), y: size.height / 2)
+            let dot = Path(ellipseIn: CGRect(x: center.x - 4.5, y: center.y - 4.5, width: 9, height: 9))
+            if isMerge {
+                context.fill(dot, with: .color(.white))
+                context.stroke(dot, with: .color(Self.color(row.column)), lineWidth: 2)
+            } else {
+                context.fill(dot, with: .color(Self.color(row.column)))
+            }
+        }
+        .frame(width: CGFloat(max(row.width, 1)) * Self.laneWidth)
+        .frame(maxHeight: .infinity)
+    }
+
+    nonisolated static func color(_ column: Int) -> Color { palette[column % palette.count] }
 }

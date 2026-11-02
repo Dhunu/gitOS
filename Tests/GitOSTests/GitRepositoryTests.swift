@@ -72,3 +72,79 @@ struct GitRepositoryTests {
         #expect(emails == ["test@example.com"])
     }
 }
+
+extension GitRepositoryTests {
+    @Test func stageAndUnstageSelectedLines() async throws {
+        try write("f.txt", "a\nb\nc\nd\n")
+        try await repo.stage(["f.txt"])
+        try await repo.commit(message: "Initial", context: identity)
+        try write("f.txt", "a\nB\nc\nD\ne\n")
+
+        var status = try await repo.status()
+        let diff = try #require(try await repo.diff(for: status.unstaged[0]))
+        let hunk = try #require(diff.hunks.first)
+        // Stage only the "B" replacement (its - and + lines).
+        let picked = Set(hunk.lines.indices.filter { ["b", "B"].contains(hunk.lines[$0].text) && hunk.lines[$0].kind != .context })
+        try await repo.apply(patch: diff.patch(for: hunk, selecting: picked, reverse: false), cached: true, reverse: false)
+
+        let index = try await Git.run(["show", ":f.txt"], in: repo.url)
+        #expect(index == "a\nB\nc\nd\n")
+
+        // Unstage it again by line selection on the staged diff.
+        status = try await repo.status()
+        let staged = try #require(try await repo.diff(for: status.staged[0]))
+        let stagedHunk = staged.hunks[0]
+        let addLine = Set(stagedHunk.lines.indices.filter { stagedHunk.lines[$0].kind != .context })
+        try await repo.apply(patch: staged.patch(for: stagedHunk, selecting: addLine, reverse: true), cached: true, reverse: true)
+        status = try await repo.status()
+        #expect(status.staged.isEmpty)
+        let worktree = try String(contentsOf: repo.url.appendingPathComponent("f.txt"), encoding: .utf8)
+        #expect(worktree == "a\nB\nc\nD\ne\n")
+    }
+
+    @Test func discardSelectedLinesOnly() async throws {
+        try write("g.txt", "1\n2\n3\n")
+        try await repo.stage(["g.txt"])
+        try await repo.commit(message: "Initial", context: identity)
+        try write("g.txt", "1\nTWO\n3\nfour\n")
+
+        let status = try await repo.status()
+        let diff = try #require(try await repo.diff(for: status.unstaged[0]))
+        let hunk = diff.hunks[0]
+        let four = Set(hunk.lines.indices.filter { hunk.lines[$0].text == "four" })
+        try await repo.apply(patch: diff.patch(for: hunk, selecting: four, reverse: true), cached: false, reverse: true)
+        let worktree = try String(contentsOf: repo.url.appendingPathComponent("g.txt"), encoding: .utf8)
+        #expect(worktree == "1\nTWO\n3\n")
+    }
+}
+
+extension GitRepositoryTests {
+    @Test func stashRoundTripAndWorktrees() async throws {
+        try write("s.txt", "one\n")
+        try await repo.stage(["s.txt"])
+        try await repo.commit(message: "Initial", context: identity)
+
+        try write("s.txt", "two\n")
+        try write("new.txt", "untracked\n")
+        try await Git.run(["-c", "user.name=T", "-c", "user.email=t@e.com", "stash", "push", "--include-untracked", "-m", "wip thing"], in: repo.url)
+        let stashes = try await repo.stashes()
+        #expect(stashes.count == 1)
+        #expect(stashes[0].ref == "stash@{0}")
+        #expect(stashes[0].message.hasSuffix("wip thing"))
+        let diff = try await repo.stashDiff(stashes[0].ref)
+        #expect(Set(diff.map(\.path)) == ["s.txt", "new.txt"])
+
+        try await repo.stashApply(stashes[0].ref, pop: true)
+        #expect(try await repo.stashes().isEmpty)
+        #expect(try await repo.status().unstaged.count == 2)
+
+        let treePath = repo.url.path + "-wt"
+        try await repo.addWorktree(path: treePath, branch: "side", newBranch: true)
+        let trees = try await repo.worktrees()
+        #expect(trees.count == 2)
+        #expect(trees[0].isMain)
+        #expect(trees[1].branch == "side")
+        try await repo.removeWorktree(path: treePath, force: false)
+        #expect(try await repo.worktrees().count == 1)
+    }
+}

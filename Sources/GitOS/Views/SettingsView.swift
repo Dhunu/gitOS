@@ -3,11 +3,71 @@ import SwiftUI
 struct SettingsView: View {
     var body: some View {
         TabView {
+            Tab("General", systemImage: "gearshape") { GeneralSettings() }
             Tab("Accounts", systemImage: "person.2") { AccountsSettings() }
             Tab("Folder Rules", systemImage: "folder.badge.person.crop") { FolderRulesSettings() }
             Tab("GitHub", systemImage: "key") { GitHubSettings() }
         }
         .frame(width: 680, height: 460)
+    }
+}
+
+// MARK: - General
+
+private struct GeneralSettings: View {
+    @Environment(AppState.self) private var app
+    @State private var cliPath = CLIInstaller.installedPath
+    @State private var cliError: String?
+
+    var body: some View {
+        @Bindable var app = app
+        Form {
+            Section("Background sync") {
+                Toggle("Fetch all repositories in the background", isOn: $app.preferences.backgroundFetch)
+                Picker("Every", selection: $app.preferences.fetchIntervalMinutes) {
+                    ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0) minutes").tag($0) }
+                }
+                .disabled(!app.preferences.backgroundFetch)
+                Toggle("Notify when a branch has new commits upstream", isOn: $app.preferences.notifyNewCommits)
+                    .onChange(of: app.preferences.notifyNewCommits) { _, on in
+                        if on { app.sync.requestNotificationPermission() }
+                    }
+                Text("Each repository is fetched with its own account.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Menu bar") {
+                Toggle("Show GitOS in the menu bar", isOn: $app.preferences.showMenuBarExtra)
+                Text("While it's shown, GitOS keeps running after you close its window.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Command line") {
+                LabeledContent("gitos command") {
+                    if let cliPath {
+                        Text(cliPath.abbreviatingWithTildeInPath).monospaced().textSelection(.enabled)
+                    } else {
+                        Text("Not installed").foregroundStyle(.secondary)
+                    }
+                }
+                HStack {
+                    Button(cliPath == nil ? "Install gitos Command" : "Reinstall") { installCLI() }
+                    if let cliError { Text(cliError).foregroundStyle(.red).font(.caption) }
+                }
+                Text("Run `gitos .` in any repository to open it here.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func installCLI() {
+        do {
+            cliPath = try CLIInstaller.install()
+            cliError = nil
+        } catch {
+            cliError = error.localizedDescription
+        }
     }
 }
 

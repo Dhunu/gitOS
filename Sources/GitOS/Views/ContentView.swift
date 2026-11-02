@@ -18,10 +18,16 @@ struct ContentView: View {
                 } description: {
                     Text("Add a local git repository to get started.")
                 } actions: {
-                    Button("Add Local Repository…") { app.addRepositoryViaPanel() }
-                        .buttonStyle(.borderedProminent)
+                    HStack {
+                        Button("Add Local Repository…") { app.addRepositoryViaPanel() }
+                        Button("Clone Repository…") { app.showingClone = true }
+                            .buttonStyle(.borderedProminent)
+                    }
                 }
             }
+        }
+        .sheet(isPresented: $app.showingClone) {
+            CloneSheet()
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { app.lastError != nil }, set: { if !$0 { app.lastError = nil } }
@@ -41,7 +47,7 @@ struct SidebarView: View {
         List(selection: $app.selectedRepoID) {
             Section("Repositories") {
                 ForEach(app.repos) { repo in
-                    RepoRow(repo: repo, resolved: app.resolveAccount(for: repo))
+                    RepoRow(repo: repo, resolved: app.resolveAccount(for: repo), summary: app.summaries[repo.id])
                         .tag(repo.id)
                         .contextMenu {
                             Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([repo.url]) }
@@ -59,8 +65,13 @@ struct SidebarView: View {
         }
         .toolbar {
             ToolbarItem {
-                Button("Add Repository", systemImage: "plus") { app.addRepositoryViaPanel() }
-                    .help("Add a local repository (⌘O)")
+                Menu {
+                    Button("Add Local Repository…") { app.addRepositoryViaPanel() }
+                    Button("Clone Repository…") { app.showingClone = true }
+                } label: {
+                    Label("Add Repository", systemImage: "plus")
+                }
+                .help("Add or clone a repository")
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -77,6 +88,7 @@ struct SidebarView: View {
 private struct RepoRow: View {
     let repo: RepoRef
     let resolved: ResolvedAccount
+    let summary: RepoSummary?
 
     var body: some View {
         HStack {
@@ -91,6 +103,9 @@ private struct RepoRow: View {
                     .truncationMode(.head)
             }
             Spacer(minLength: 4)
+            if let summary {
+                SummaryBadges(summary: summary)
+            }
             if let account = resolved.account {
                 AvatarView(account: account, size: 16)
                     .help("\(account.title): \(resolved.explanation)")
@@ -127,4 +142,24 @@ private struct DefaultAccountFooter: View {
 
 extension String {
     var abbreviatingWithTildeInPath: String { (self as NSString).abbreviatingWithTildeInPath }
+}
+
+struct SummaryBadges: View {
+    let summary: RepoSummary
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if summary.behind > 0 { Text("↓\(summary.behind)").foregroundStyle(.orange) }
+            if summary.ahead > 0 { Text("↑\(summary.ahead)").foregroundStyle(.blue) }
+            if summary.changes > 0 {
+                Circle().fill(.secondary).frame(width: 6, height: 6)
+                    .help("\(summary.changes) uncommitted change\(summary.changes == 1 ? "" : "s")")
+            }
+            if summary.fetchError != nil {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                    .help(summary.fetchError ?? "")
+            }
+        }
+        .font(.caption.monospacedDigit())
+    }
 }

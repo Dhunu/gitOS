@@ -116,3 +116,33 @@ struct AccountTests {
         #expect(GitContext.none.configArgs.isEmpty)
     }
 }
+
+struct PersonTests {
+    @Test func parsesNameAndEmail() {
+        let person = Person(parsing: "  Ada Lovelace <ada@example.com> ")
+        #expect(person?.name == "Ada Lovelace")
+        #expect(person?.trailer == "Co-authored-by: Ada Lovelace <ada@example.com>")
+        #expect(Person(parsing: "no email here") == nil)
+        #expect(Person(parsing: "<ada@example.com>") == nil)
+    }
+}
+
+struct WorktreeParserTests {
+    @Test func parsesPorcelain() {
+        let output = """
+        worktree /src/app
+        HEAD 1111111111111111111111111111111111111111
+        branch refs/heads/main
+
+        worktree /src/app-feature
+        HEAD 2222222222222222222222222222222222222222
+        detached
+        locked
+
+        """
+        let trees = WorktreeParser.parse(output)
+        #expect(trees.count == 2)
+        #expect(trees[0].isMain && trees[0].branch == "main")
+        #expect(!trees[1].isMain && trees[1].branch == nil && trees[1].isLocked)
+    }
+}

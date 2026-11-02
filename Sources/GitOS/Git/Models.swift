@@ -99,6 +99,37 @@ struct FileDiff: Identifiable, Hashable, Sendable {
     func patch(for hunk: DiffHunk) -> String {
         (headerLines + [hunk.header] + hunk.lines.map(\.raw)).joined(separator: "\n") + "\n"
     }
+
+    /// A patch containing only the `selected` line indexes of `hunk`.
+    /// Unselected changes are neutralised relative to the side the patch is applied to:
+    /// forward (staging) keeps unselected deletions as context and drops unselected additions;
+    /// `reverse` (unstaging/discarding) does the opposite.
+    func patch(for hunk: DiffHunk, selecting selected: Set<Int>, reverse: Bool) -> String {
+        var body: [String] = []
+        var oldCount = 0, newCount = 0
+        var lastKept = false
+        for (index, line) in hunk.lines.enumerated() {
+            let keepAsChange = selected.contains(index)
+            switch line.kind {
+            case .context:
+                body.append(line.raw); oldCount += 1; newCount += 1; lastKept = true
+            case .addition where keepAsChange:
+                body.append(line.raw); newCount += 1; lastKept = true
+            case .deletion where keepAsChange:
+                body.append(line.raw); oldCount += 1; lastKept = true
+            case .addition:
+                if reverse { body.append(" " + line.text); oldCount += 1; newCount += 1 }
+                lastKept = reverse
+            case .deletion:
+                if !reverse { body.append(" " + line.text); oldCount += 1; newCount += 1 }
+                lastKept = !reverse
+            case .noNewline:
+                if lastKept { body.append(line.raw) }
+            }
+        }
+        let header = "@@ -\(hunk.oldStart),\(oldCount) +\(hunk.newStart),\(newCount) @@"
+        return (headerLines + [header] + body).joined(separator: "\n") + "\n"
+    }
 }
 
 struct Commit: Identifiable, Hashable, Sendable {
@@ -132,5 +163,47 @@ struct RemoteInfo: Hashable, Sendable {
     var webURL: URL? {
         guard let host, let owner, let repo else { return nil }
         return URL(string: "https://\(host)/\(owner)/\(repo)")
+    }
+}
+
+struct Stash: Identifiable, Hashable, Sendable {
+    var ref: String
+    var message: String
+    var date: Date
+    var id: String { ref }
+}
+
+struct Worktree: Identifiable, Hashable, Sendable {
+    var path: String
+    var head: String?
+    var branch: String?
+    var isMain = false
+    var isLocked = false
+    var isPrunable = false
+
+    var id: String { path }
+    var name: String { (path as NSString).lastPathComponent }
+}
+
+struct Person: Identifiable, Hashable, Sendable, Codable {
+    var name: String
+    var email: String
+
+    var id: String { email.lowercased() }
+    var trailer: String { "Co-authored-by: \(name) <\(email)>" }
+
+    /// Parses "Name <email>".
+    init?(parsing text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard let open = trimmed.lastIndex(of: "<"), trimmed.hasSuffix(">") else { return nil }
+        let name = trimmed[..<open].trimmingCharacters(in: .whitespaces)
+        let email = trimmed[trimmed.index(after: open)..<trimmed.index(before: trimmed.endIndex)]
+        guard !name.isEmpty, email.contains("@") else { return nil }
+        self.init(name: name, email: String(email))
+    }
+
+    init(name: String, email: String) {
+        self.name = name
+        self.email = email
     }
 }

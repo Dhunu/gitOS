@@ -21,5 +21,8 @@ swift test                        # parser + real-git integration tests
 3. **Settings › Folder Rules**: e.g. `~/Work` → work account. Everything else uses the default account.
    The account button in a repo's toolbar overrides it per repo.
 
+Settings › General has background fetch, notifications, the menu bar icon, and
+**Install gitos Command** (then `gitos .` in any repo opens it in GitOS).
+
 Tokens live in the macOS Keychain. Account switching is done with per-command `-c` flags, so
 `~/.gitconfig` and your existing keychain entries are never modified.

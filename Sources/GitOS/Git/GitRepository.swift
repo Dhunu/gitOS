@@ -63,7 +63,7 @@ struct GitRepository: Sendable {
 
     /// Applies a single-hunk patch. `cached` targets the index; `reverse` undoes the hunk.
     func apply(patch: String, cached: Bool, reverse: Bool) async throws {
-        var args = ["apply", "--whitespace=nowarn"]
+        var args = ["apply", "--recount", "--whitespace=nowarn"]
         if cached { args.append("--cached") }
         if reverse { args.append("--reverse") }
         args.append("-")
@@ -76,8 +76,9 @@ struct GitRepository: Sendable {
 
     // MARK: History & branches
 
-    func log(limit: Int = 500) async throws -> [Commit] {
-        let output = try await Git.run(["log", "--topo-order", "-n", "\(limit)", "--format=\(LogParser.format)", "HEAD"], in: url)
+    func log(limit: Int = 500, allBranches: Bool = false) async throws -> [Commit] {
+        let refs = allBranches ? ["--branches", "--remotes", "--tags", "HEAD"] : ["HEAD"]
+        let output = try await Git.run(["log", "--topo-order", "-n", "\(limit)", "--format=\(LogParser.format)"] + refs, in: url)
         return LogParser.parse(output)
     }
 
@@ -96,6 +97,46 @@ struct GitRepository: Sendable {
 
     func createBranch(_ name: String) async throws {
         try await Git.run(["switch", "-c", name], in: url)
+    }
+
+    // MARK: Stashes
+
+    func stashes() async throws -> [Stash] {
+        StashParser.parse(try await Git.run(["stash", "list", "--format=\(StashParser.format)"], in: url))
+    }
+
+    func stash(message: String) async throws {
+        var args = ["stash", "push", "--include-untracked"]
+        if !message.isEmpty { args += ["-m", message] }
+        try await Git.run(args, in: url)
+    }
+
+    func stashApply(_ ref: String, pop: Bool) async throws {
+        try await Git.run(["stash", pop ? "pop" : "apply", "--index", ref], in: url)
+    }
+
+    func stashDrop(_ ref: String) async throws {
+        try await Git.run(["stash", "drop", ref], in: url)
+    }
+
+    func stashDiff(_ ref: String) async throws -> [FileDiff] {
+        DiffParser.parse(try await Git.run(["stash", "show", "--no-ext-diff", "-p", "--include-untracked", ref], in: url))
+    }
+
+    // MARK: Worktrees
+
+    func worktrees() async throws -> [Worktree] {
+        WorktreeParser.parse(try await Git.run(["worktree", "list", "--porcelain"], in: url))
+    }
+
+    /// Adds a worktree at `path`, checking out `branch`, or creating it from HEAD when `newBranch` is set.
+    func addWorktree(path: String, branch: String, newBranch: Bool) async throws {
+        let args = newBranch ? ["worktree", "add", "-b", branch, path] : ["worktree", "add", path, branch]
+        try await Git.run(args, in: url)
+    }
+
+    func removeWorktree(path: String, force: Bool) async throws {
+        try await Git.run(["worktree", "remove"] + (force ? ["--force"] : []) + [path], in: url)
     }
 
     // MARK: Remotes

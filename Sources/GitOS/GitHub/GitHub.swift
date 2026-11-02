@@ -71,7 +71,9 @@ enum GitHubDeviceFlow {
         if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
             throw GitHubError(message: "GitHub returned \(http.statusCode). Check the OAuth app's Client ID and that Device Flow is enabled.")
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(T.self, from: data)
     }
 }
 
@@ -92,8 +94,38 @@ struct GitHubAPI: Sendable {
         let verified: Bool
     }
 
+    struct Repository: Decodable, Identifiable, Hashable, Sendable {
+        struct Owner: Decodable, Hashable, Sendable { let login: String }
+        let id: Int
+        let name: String
+        let fullName: String
+        let owner: Owner
+        let isPrivate: Bool
+        let fork: Bool
+        let description: String?
+        let cloneURL: String
+        let pushedAt: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case id, name, owner, fork, description
+            case fullName = "full_name", isPrivate = "private", cloneURL = "clone_url", pushedAt = "pushed_at"
+        }
+    }
+
     func user() async throws -> User { try await get("/user") }
     func emails() async throws -> [Email] { try await get("/user/emails") }
+
+    /// Every repo the account can access (own, collaborator, org member), most recently pushed first.
+    func repositories(maxPages: Int = 10) async throws -> [Repository] {
+        var all: [Repository] = []
+        for page in 1...maxPages {
+            let batch: [Repository] = try await get(
+                "/user/repos?per_page=100&page=\(page)&sort=pushed&affiliation=owner,collaborator,organization_member")
+            all += batch
+            if batch.count < 100 { break }
+        }
+        return all
+    }
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
         var request = URLRequest(url: URL(string: "https://api.github.com" + path)!)
@@ -104,6 +136,8 @@ struct GitHubAPI: Sendable {
         if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
             throw GitHubError(message: "GitHub API \(path) returned \(http.statusCode).")
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(T.self, from: data)
     }
 }

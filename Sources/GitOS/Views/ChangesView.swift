@@ -3,6 +3,7 @@ import SwiftUI
 struct ChangesView: View {
     @Bindable var model: RepoModel
     @State private var pendingDiscard: FileChange?
+    @State private var lineSelection: Set<DiffLineID> = []
 
     var body: some View {
         HSplitView {
@@ -16,6 +17,7 @@ struct ChangesView: View {
             diffPane
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
         }
+        .onChange(of: model.currentDiff) { lineSelection = [] }
         .confirmationDialog(
             "Discard changes to \(pendingDiscard?.fileName ?? "")?",
             isPresented: Binding(get: { pendingDiscard != nil }, set: { if !$0 { pendingDiscard = nil } }),
@@ -114,7 +116,7 @@ struct ChangesView: View {
                 Divider()
                 if let diff = model.currentDiff {
                     ScrollView {
-                        DiffContentView(diff: diff, hunkActions: hunkActions(for: change, diff: diff))
+                        DiffContentView(diff: diff, hunkActions: hunkActions(for: change, diff: diff), selection: $lineSelection)
                             .padding(.bottom, 12)
                     }
                 } else {
@@ -131,15 +133,15 @@ struct ChangesView: View {
     private func hunkActions(for change: FileChange, diff: FileDiff) -> [HunkActionButton] {
         switch change.area {
         case .staged:
-            [HunkActionButton(title: "Unstage Hunk", icon: "minus.circle") { hunk in
-                Task { await model.apply(.unstage, hunk: hunk, in: diff) }
+            [HunkActionButton(title: "Unstage", icon: "minus.circle") { hunk, lines in
+                Task { await model.apply(.unstage, hunk: hunk, lines: lines, in: diff) }
             }]
         case .unstaged where change.kind != .untracked:
-            [HunkActionButton(title: "Discard Hunk", icon: "trash", destructive: true) { hunk in
-                Task { await model.apply(.discard, hunk: hunk, in: diff) }
+            [HunkActionButton(title: "Discard", icon: "trash", destructive: true) { hunk, lines in
+                Task { await model.apply(.discard, hunk: hunk, lines: lines, in: diff) }
             },
-             HunkActionButton(title: "Stage Hunk", icon: "plus.circle") { hunk in
-                Task { await model.apply(.stage, hunk: hunk, in: diff) }
+             HunkActionButton(title: "Stage", icon: "plus.circle") { hunk, lines in
+                Task { await model.apply(.stage, hunk: hunk, lines: lines, in: diff) }
             }]
         default:
             []
@@ -238,6 +240,8 @@ struct CommitBox: View {
                 }
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator))
 
+            CoAuthorPicker(model: model)
+
             Button {
                 Task { await model.commit() }
             } label: {
@@ -262,5 +266,70 @@ struct CommitBox: View {
         let count = model.status.staged.count
         let files = count == 1 ? "1 file" : "\(count) files"
         return "Commit \(files) to \(model.status.branch ?? "HEAD")"
+    }
+}
+
+private struct CoAuthorPicker: View {
+    @Bindable var model: RepoModel
+    @State private var adding = false
+    @State private var newPerson = ""
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Menu {
+                let people = model.knownPeople.prefix(30)
+                if people.isEmpty {
+                    Text("No recent authors")
+                }
+                ForEach(Array(people)) { person in
+                    Toggle(isOn: Binding(
+                        get: { model.coAuthors.contains(person) },
+                        set: { on in
+                            if on { model.coAuthors.append(person) } else { model.coAuthors.removeAll { $0 == person } }
+                        }
+                    )) {
+                        Text("\(person.name) <\(person.email)>")
+                    }
+                }
+                Divider()
+                Button("Add Someone Else…") { adding = true }
+            } label: {
+                Label(model.coAuthors.isEmpty ? "Co-authors" : "\(model.coAuthors.count)", systemImage: "person.2")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("Add Co-authored-by trailers")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(model.coAuthors) { person in
+                        HStack(spacing: 3) {
+                            Text(person.name).lineLimit(1)
+                            Button { model.coAuthors.removeAll { $0 == person } } label: {
+                                Image(systemName: "xmark.circle.fill")
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(.quaternary, in: Capsule())
+                        .help(person.trailer)
+                    }
+                }
+            }
+        }
+        .alert("Add Co-author", isPresented: $adding) {
+            TextField("Name <email@example.com>", text: $newPerson)
+            Button("Add") {
+                if let person = Person(parsing: newPerson) {
+                    model.extraPeople.insert(person, at: 0)
+                    if !model.coAuthors.contains(person) { model.coAuthors.append(person) }
+                }
+                newPerson = ""
+            }
+            Button("Cancel", role: .cancel) { newPerson = "" }
+        } message: {
+            Text("Use their GitHub noreply email so the commit is credited to them.")
+        }
     }
 }

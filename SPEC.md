@@ -37,7 +37,7 @@ Account resolution for a repo: repo override → longest matching folder rule �
 
 ## Roadmap
 
-**Phase 1 (this build)**
+**Phase 1 — done**
 - Accounts: GitHub device-flow sign-in, Keychain, label, commit identity, signing config
 - Folder rules, per-repo override, default account; toolbar account switcher that says *why*
 - Repos: add local repo, sidebar list, reveal/open in Terminal
@@ -48,12 +48,15 @@ Account resolution for a repo: repo override → longest matching folder rule �
 - Fetch / pull / push with ahead/behind; push mismatch warning (author email ∉ account emails)
 - History list + commit diff
 
-**Phase 2**
-- Commit graph lanes in history; line-level staging
-- Clone from account (browse user + org repos)
-- Stash list (save/apply/pop/drop, preview), worktrees
-- Co-author picker; menu bar switcher (`MenuBarExtra`); `gitos` CLI launcher
-- Background fetch + FSEvents auto-refresh, notifications
+**Phase 2 — done**
+- Commit graph lanes in History (current branch or all branches)
+- Line-level staging/unstaging/discarding (click the line-number gutter, Shift-click for ranges)
+- Clone from account (lists user + org repos; defaults to the account's folder rule; pins the account if needed)
+- Stashes tab (stash incl. untracked, apply/pop/drop, diff preview) and Worktrees tab (add/remove/open)
+- Co-author picker (recent authors + manual), `Co-authored-by` trailers
+- Menu bar extra: default-account switcher, per-repo status, Fetch All
+- `gitos` CLI (Settings › General installs it), opens/adds the repo
+- Background fetch per account (interval in Settings), FSEvents auto-refresh, "new commits upstream" notifications
 
 **Phase 3**
 - Pull requests (list, create, checkout), checks status on branches/PRs, issues

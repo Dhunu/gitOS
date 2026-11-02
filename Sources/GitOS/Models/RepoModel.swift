@@ -11,7 +11,13 @@ final class RepoModel {
     var status = RepoStatus()
     var branches: [Branch] = []
     var remotes: [RemoteInfo] = []
-    var commits: [Commit] = []
+    var commits: [Commit] = [] { didSet { graph = CommitGraph.layout(commits) } }
+    private(set) var graph: [GraphRow] = []
+    var stashes: [Stash] = []
+    var worktrees: [Worktree] = []
+    var selectedStashID: Stash.ID? { didSet { if oldValue != selectedStashID { Task { await loadStashDiff() } } } }
+    var stashDiffs: [FileDiff] = []
+    var showAllBranches = false { didSet { Task { await refresh() } } }
 
     var selectedChangeID: FileChange.ID? { didSet { if oldValue != selectedChangeID { Task { await loadDiff() } } } }
     var currentDiff: FileDiff?
@@ -20,6 +26,8 @@ final class RepoModel {
 
     var summary = ""
     var details = ""
+    var coAuthors: [Person] = []
+    var extraPeople: [Person] = []
 
     var activity: String?
     var errorMessage: String?
@@ -43,16 +51,50 @@ final class RepoModel {
     var selectedChange: FileChange? { status.change(id: selectedChangeID) }
     var isBusy: Bool { activity != nil }
 
+    /// Recent commit authors (plus manually added people) other than the committing account.
+    var knownPeople: [Person] {
+        var seen = Set<String>()
+        let account = resolved.account
+        return (extraPeople + commits.map { Person(name: $0.authorName, email: $0.authorEmail) })
+            .filter { person in
+                !(account?.owns(email: person.email) ?? false)
+                    && !person.email.hasSuffix("[bot]@users.noreply.github.com")
+                    && seen.insert(person.id).inserted
+            }
+    }
+
     // MARK: Loading
+
+    private var pendingRefresh: Task<Void, Never>?
+
+    /// Coalesces bursts of file-system events into one refresh.
+    func scheduleRefresh() {
+        guard !isBusy else { return }
+        pendingRefresh?.cancel()
+        pendingRefresh = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            await refresh()
+        }
+    }
 
     func refresh() async {
         do {
             status = try await repo.status()
+            var summary = app.summaries[repoID] ?? RepoSummary()
+            summary.branch = status.branch
+            summary.ahead = status.ahead
+            summary.behind = status.behind
+            summary.changes = status.staged.count + status.unstaged.count + status.conflicted.count
+            app.summaries[repoID] = summary
             async let branches = repo.branches()
             async let remotes = repo.remotes()
-            async let commits = status.isUnborn ? [] : repo.log()
+            async let commits = status.isUnborn ? [] : repo.log(allBranches: showAllBranches)
             self.branches = try await branches
             self.remotes = (try? await remotes) ?? []
+            stashes = (try? await repo.stashes()) ?? []
+            worktrees = (try? await repo.worktrees()) ?? []
+            if !stashes.contains(where: { $0.id == selectedStashID }) { selectedStashID = stashes.first?.id }
             self.commits = (try? await commits) ?? []
             if status.change(id: selectedChangeID) == nil {
                 selectedChangeID = (status.conflicted + status.unstaged + status.staged).first?.id
@@ -73,6 +115,11 @@ final class RepoModel {
     private func loadCommitDiff() async {
         guard let sha = selectedCommitID else { commitDiffs = []; return }
         commitDiffs = (try? await repo.show(sha)) ?? []
+    }
+
+    private func loadStashDiff() async {
+        guard let ref = selectedStashID else { stashDiffs = []; return }
+        stashDiffs = (try? await repo.stashDiff(ref)) ?? []
     }
 
     // MARK: Actions
@@ -114,8 +161,11 @@ final class RepoModel {
 
     enum HunkAction { case stage, unstage, discard }
 
-    func apply(_ action: HunkAction, hunk: DiffHunk, in diff: FileDiff) async {
-        let patch = diff.patch(for: hunk)
+    /// Applies a whole hunk, or only `lines` (indexes into the hunk) when given.
+    func apply(_ action: HunkAction, hunk: DiffHunk, lines: Set<Int> = [], in diff: FileDiff) async {
+        let patch = lines.isEmpty
+            ? diff.patch(for: hunk)
+            : diff.patch(for: hunk, selecting: lines, reverse: action != .stage)
         await perform("Applying hunk") {
             switch action {
             case .stage: try await repo.apply(patch: patch, cached: true, reverse: false)
@@ -126,14 +176,18 @@ final class RepoModel {
     }
 
     func commit() async {
-        let message = details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        var message = details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? summary
             : summary + "\n\n" + details
+        if !coAuthors.isEmpty {
+            message += "\n\n" + coAuthors.map(\.trailer).joined(separator: "\n")
+        }
         let context = app.gitContext(for: ref)
         await perform("Committing") {
             try await repo.commit(message: message, context: context)
             summary = ""
             details = ""
+            coAuthors = []
         }
     }
 
@@ -143,6 +197,26 @@ final class RepoModel {
 
     func createBranch(_ name: String) async {
         await perform("Creating \(name)") { try await repo.createBranch(name) }
+    }
+
+    func stash(message: String) async {
+        await perform("Stashing") { try await repo.stash(message: message) }
+    }
+
+    func applyStash(_ stash: Stash, pop: Bool) async {
+        await perform(pop ? "Popping stash" : "Applying stash") { try await repo.stashApply(stash.ref, pop: pop) }
+    }
+
+    func dropStash(_ stash: Stash) async {
+        await perform("Dropping stash") { try await repo.stashDrop(stash.ref) }
+    }
+
+    func addWorktree(path: String, branch: String, newBranch: Bool) async {
+        await perform("Adding worktree") { try await repo.addWorktree(path: path, branch: branch, newBranch: newBranch) }
+    }
+
+    func removeWorktree(_ tree: Worktree, force: Bool) async {
+        await perform("Removing worktree") { try await repo.removeWorktree(path: tree.path, force: force) }
     }
 
     func fetch() async {

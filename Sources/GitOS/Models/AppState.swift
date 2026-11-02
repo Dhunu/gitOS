@@ -2,16 +2,39 @@ import AppKit
 import Foundation
 import Observation
 
+struct Preferences: Codable, Equatable, Sendable {
+    var backgroundFetch = true
+    var fetchIntervalMinutes = 10
+    var notifyNewCommits = true
+    var showMenuBarExtra = true
+}
+
+/// Last known state of a repository, kept fresh by background sync for the sidebar and menu bar.
+struct RepoSummary: Sendable {
+    var branch: String?
+    var ahead = 0
+    var behind = 0
+    var changes = 0
+    var lastFetch: Date?
+    var fetchError: String?
+}
+
 @Observable
 @MainActor
 final class AppState {
+    static let shared = AppState()
+
     var accounts: [Account] = [] { didSet { save() } }
     var rules: [FolderRule] = [] { didSet { save() } }
     var repos: [RepoRef] = [] { didSet { save() } }
     var defaultAccountID: UUID? { didSet { save() } }
     var githubClientID = "" { didSet { save() } }
     var selectedRepoID: RepoRef.ID? { didSet { save() } }
+    var preferences = Preferences() { didSet { save(); if oldValue != preferences { sync.preferencesChanged() } } }
+    var summaries: [RepoRef.ID: RepoSummary] = [:]
     var lastError: String?
+    var showingClone = false
+    @ObservationIgnored lazy var sync = BackgroundSync(app: self)
 
     private var loading = false
 
@@ -22,6 +45,8 @@ final class AppState {
         var defaultAccountID: UUID?
         var githubClientID = ""
         var selectedRepoID: UUID?
+        // Optional so state files written before a field existed still decode.
+        var preferences: Preferences?
     }
 
     private static var stateURL: URL {
@@ -62,7 +87,11 @@ final class AppState {
 
     func gitContext(for repo: RepoRef) -> GitContext {
         guard let account = resolveAccount(for: repo).account else { return .none }
-        return GitContext(
+        return gitContext(for: account)
+    }
+
+    func gitContext(for account: Account) -> GitContext {
+        GitContext(
             authorName: account.commitName,
             authorEmail: account.commitEmail,
             signing: account.signing,
@@ -152,6 +181,30 @@ final class AppState {
         }
     }
 
+    /// Folder a new clone for `account` should go in: its folder rule if it has one, else ~/Developer or home.
+    func suggestedCloneFolder(for account: Account?) -> URL {
+        if let account, let rule = rules.first(where: { $0.accountID == account.id }) {
+            return URL(fileURLWithPath: rule.folder)
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let developer = home.appendingPathComponent("Developer")
+        return FileManager.default.fileExists(atPath: developer.path) ? developer : home
+    }
+
+    /// Clones with `account`'s credentials, adds the repo, and pins the account if folder rules wouldn't pick it.
+    func clone(_ remoteURL: String, into parent: URL, name: String, account: Account?) async throws {
+        let context = account.map { gitContext(for: $0) } ?? .none
+        try await Git.run(["clone", "--", remoteURL, name], in: parent, context: context)
+        let path = parent.appendingPathComponent(name).path
+        var ref = RepoRef(path: path)
+        if let account, resolveAccount(for: ref).account?.id != account.id {
+            ref.accountOverride = account.id
+        }
+        repos.append(ref)
+        repos.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        selectedRepoID = ref.id
+    }
+
     func removeRepository(_ id: RepoRef.ID) {
         repos.removeAll { $0.id == id }
         if selectedRepoID == id { selectedRepoID = repos.first?.id }
@@ -170,12 +223,14 @@ final class AppState {
         defaultAccountID = state.defaultAccountID
         githubClientID = state.githubClientID
         selectedRepoID = state.selectedRepoID
+        preferences = state.preferences ?? Preferences()
     }
 
     private func save() {
         guard !loading else { return }
         let state = Persisted(accounts: accounts, rules: rules, repos: repos, defaultAccountID: defaultAccountID,
-                              githubClientID: githubClientID, selectedRepoID: selectedRepoID)
+                              githubClientID: githubClientID, selectedRepoID: selectedRepoID,
+                              preferences: preferences)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try? encoder.encode(state).write(to: Self.stateURL, options: .atomic)

@@ -6,14 +6,19 @@ struct RepoView: View {
     @State private var tab: Tab = .changes
     @State private var newBranchName = ""
     @State private var showingNewBranch = false
+    @State private var watcher: RepoWatcher?
 
-    enum Tab: String, CaseIterable { case changes = "Changes", history = "History" }
+    enum Tab: String, CaseIterable {
+        case changes = "Changes", history = "History", stashes = "Stashes", worktrees = "Worktrees"
+    }
 
     var body: some View {
         Group {
             switch tab {
             case .changes: ChangesView(model: model)
             case .history: HistoryView(model: model)
+            case .stashes: StashesView(model: model)
+            case .worktrees: WorktreesView(model: model)
             }
         }
         .navigationTitle(model.ref.name)
@@ -22,9 +27,7 @@ struct RepoView: View {
             ToolbarItem(placement: .principal) {
                 Picker("View", selection: $tab) {
                     ForEach(Tab.allCases, id: \.self) { tab in
-                        Text(tab == .changes && model.status.hasChanges
-                             ? "Changes (\(model.status.staged.count + model.status.unstaged.count + model.status.conflicted.count))"
-                             : tab.rawValue)
+                        Text(title(for: tab))
                     }
                 }
                 .pickerStyle(.segmented)
@@ -33,7 +36,14 @@ struct RepoView: View {
             ToolbarItem { branchMenu }
             ToolbarItem { syncButton }
         }
-        .task { await model.refresh() }
+        .task {
+            await model.refresh()
+            watcher = RepoWatcher(path: model.repo.url.path) { [model] in model.scheduleRefresh() }
+        }
+        .onDisappear {
+            watcher?.stop()
+            watcher = nil
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await model.refresh() }
         }
@@ -64,6 +74,16 @@ struct RepoView: View {
                 Task { await model.createBranch(name) }
             }
         }
+    }
+
+    private func title(for tab: Tab) -> String {
+        let count = switch tab {
+        case .changes: model.status.staged.count + model.status.unstaged.count + model.status.conflicted.count
+        case .stashes: model.stashes.count
+        case .worktrees: max(model.worktrees.count - 1, 0)
+        case .history: 0
+        }
+        return count > 0 ? "\(tab.rawValue) (\(count))" : tab.rawValue
     }
 
     private var branchMenu: some View {

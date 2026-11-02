@@ -218,3 +218,44 @@ enum RemoteParser {
         return info
     }
 }
+
+enum StashParser {
+    static let format = "%gd%x1f%at%x1f%gs"
+
+    static func parse(_ output: String) -> [Stash] {
+        output.split(separator: "\n").compactMap { line in
+            let fields = line.components(separatedBy: "\u{1f}")
+            guard fields.count == 3 else { return nil }
+            return Stash(ref: fields[0], message: fields[2], date: Date(timeIntervalSince1970: TimeInterval(fields[1]) ?? 0))
+        }
+    }
+}
+
+enum WorktreeParser {
+    /// Parses `git worktree list --porcelain`. The first entry is the main worktree.
+    static func parse(_ output: String) -> [Worktree] {
+        output.components(separatedBy: "\n\n").compactMap { block in
+            var tree: Worktree?
+            for line in block.split(separator: "\n") {
+                let (key, value) = line.firstIndex(of: " ").map {
+                    (String(line[..<$0]), String(line[line.index(after: $0)...]))
+                } ?? (String(line), "")
+                switch key {
+                case "worktree": tree = Worktree(path: value)
+                case "HEAD": tree?.head = value
+                case "branch": tree?.branch = value.replacingOccurrences(of: "refs/heads/", with: "")
+                case "locked": tree?.isLocked = true
+                case "prunable": tree?.isPrunable = true
+                default: break
+                }
+            }
+            return tree
+        }
+        .enumerated()
+        .map { index, tree in
+            var tree = tree
+            tree.isMain = index == 0
+            return tree
+        }
+    }
+}
