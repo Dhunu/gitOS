@@ -1,0 +1,68 @@
+# GitOS — spec
+
+A native macOS (SwiftUI, macOS 27+) git client modelled on GitHub Desktop, built around
+**multiple GitHub accounts** that switch automatically per folder/repo.
+
+## Decisions (from the kickoff Q&A, 2026-11-01)
+
+| Area | Decision |
+|---|---|
+| Account switching | Folder rules (`~/Work` → work account) + per-repo override + global default |
+| Hosts | GitHub.com |
+| Auth | Browser OAuth (GitHub device flow); tokens in the macOS Keychain |
+| macOS | 27+ only (latest SwiftUI, Liquid Glass) |
+| Git engine | System `git` CLI, output parsed (`--porcelain=v2 -z`, custom `--format`) |
+| Power features | Commit graph, line/hunk staging, interactive rebase UI, stash & worktrees |
+| Conflicts | Built-in 3-way merge editor |
+| GitHub | Pull requests, CI/checks status, clone from account, issues |
+| Identity per account | Commit name/email, SSH/GPG signing, co-author picker, push mismatch warning |
+| Extras | AI commit messages (Claude), menu bar switcher, `gitos` CLI, background fetch |
+| Distribution | Local build only (no sandbox) |
+| Name | GitOS |
+
+## How multi-account works
+
+Every git command GitOS runs gets per-invocation config, so nothing in `~/.gitconfig`
+or the macOS keychain is changed:
+
+- **Credentials** — `-c credential.https://github.com.helper=` (clears every other helper,
+  e.g. osxkeychain, *for github.com only*) followed by an inline helper that returns the
+  resolved account's OAuth token from env vars. Other hosts keep the user's normal helpers.
+- **SSH remotes** — `url.https://github.com/.insteadOf=git@github.com:` so SSH remotes also
+  go through the account's token (no `~/.ssh/config` host aliases needed).
+- **Identity** — `user.name`, `user.email`, and when configured `gpg.format`,
+  `user.signingkey`, `commit.gpgsign=true`.
+
+Account resolution for a repo: repo override → longest matching folder rule → default account.
+
+## Roadmap
+
+**Phase 1 (this build)**
+- Accounts: GitHub device-flow sign-in, Keychain, label, commit identity, signing config
+- Folder rules, per-repo override, default account; toolbar account switcher that says *why*
+- Repos: add local repo, sidebar list, reveal/open in Terminal
+- Changes: staged / unstaged / conflicted lists, stage/unstage/discard, diff view,
+  **hunk** stage/unstage/discard
+- Commit box (summary + description, ⌘↩), committing as the resolved identity
+- Branches: switch, create
+- Fetch / pull / push with ahead/behind; push mismatch warning (author email ∉ account emails)
+- History list + commit diff
+
+**Phase 2**
+- Commit graph lanes in history; line-level staging
+- Clone from account (browse user + org repos)
+- Stash list (save/apply/pop/drop, preview), worktrees
+- Co-author picker; menu bar switcher (`MenuBarExtra`); `gitos` CLI launcher
+- Background fetch + FSEvents auto-refresh, notifications
+
+**Phase 3**
+- Pull requests (list, create, checkout), checks status on branches/PRs, issues
+- Interactive rebase UI (reorder/squash/fixup/reword/drop)
+- 3-way conflict editor
+- AI commit message / PR description (Claude API, key in Keychain)
+
+## Setup note
+
+Device flow needs a GitHub OAuth App client ID (one-time):
+github.com/settings/applications/new → any name, homepage/callback `http://localhost`
+→ tick **Enable Device Flow** → paste the Client ID into GitOS Settings › GitHub.

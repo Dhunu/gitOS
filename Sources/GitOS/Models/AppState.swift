@@ -1,0 +1,183 @@
+import AppKit
+import Foundation
+import Observation
+
+@Observable
+@MainActor
+final class AppState {
+    var accounts: [Account] = [] { didSet { save() } }
+    var rules: [FolderRule] = [] { didSet { save() } }
+    var repos: [RepoRef] = [] { didSet { save() } }
+    var defaultAccountID: UUID? { didSet { save() } }
+    var githubClientID = "" { didSet { save() } }
+    var selectedRepoID: RepoRef.ID? { didSet { save() } }
+    var lastError: String?
+
+    private var loading = false
+
+    private struct Persisted: Codable {
+        var accounts: [Account] = []
+        var rules: [FolderRule] = []
+        var repos: [RepoRef] = []
+        var defaultAccountID: UUID?
+        var githubClientID = ""
+        var selectedRepoID: UUID?
+    }
+
+    private static var stateURL: URL {
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("GitOS", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("state.json")
+    }
+
+    init() {
+        load()
+    }
+
+    var selectedRepo: RepoRef? { repos.first { $0.id == selectedRepoID } }
+
+    func account(id: UUID?) -> Account? {
+        guard let id else { return nil }
+        return accounts.first { $0.id == id }
+    }
+
+    // MARK: Account resolution
+
+    func resolveAccount(for repo: RepoRef) -> ResolvedAccount {
+        if let account = account(id: repo.accountOverride) {
+            return ResolvedAccount(account: account, source: .override)
+        }
+        let rule = rules
+            .filter { $0.matches(repo.path) && account(id: $0.accountID) != nil }
+            .max { $0.folder.count < $1.folder.count }
+        if let rule {
+            return ResolvedAccount(account: account(id: rule.accountID), source: .folderRule(rule.folder))
+        }
+        if let account = account(id: defaultAccountID) {
+            return ResolvedAccount(account: account, source: .defaultAccount)
+        }
+        return ResolvedAccount(account: nil, source: .none)
+    }
+
+    func gitContext(for repo: RepoRef) -> GitContext {
+        guard let account = resolveAccount(for: repo).account else { return .none }
+        return GitContext(
+            authorName: account.commitName,
+            authorEmail: account.commitEmail,
+            signing: account.signing,
+            githubUser: account.login,
+            githubToken: Keychain.get(account.id.uuidString)
+        )
+    }
+
+    func setOverride(_ accountID: UUID?, for repoID: RepoRef.ID) {
+        guard let index = repos.firstIndex(where: { $0.id == repoID }) else { return }
+        repos[index].accountOverride = accountID
+    }
+
+    // MARK: Accounts
+
+    /// Adds or refreshes an account from a freshly issued OAuth token.
+    func signIn(token: String) async throws -> Account {
+        let api = GitHubAPI(token: token)
+        async let userRequest = api.user()
+        async let emailsRequest = api.emails()
+        let user = try await userRequest
+        let emails = (try? await emailsRequest) ?? []
+
+        let verified = emails.filter(\.verified).map(\.email)
+        let primary = emails.first { $0.primary && $0.verified }?.email
+
+        var account = accounts.first { $0.githubID == user.id } ?? Account(
+            githubID: user.id,
+            login: user.login,
+            displayName: user.name ?? user.login,
+            commitName: user.name ?? user.login,
+            commitEmail: ""
+        )
+        account.login = user.login
+        account.displayName = user.name ?? user.login
+        account.avatarURL = user.avatarURL
+        account.knownEmails = Array(Set(verified + [account.noreplyEmail])).sorted()
+        if account.commitEmail.isEmpty { account.commitEmail = primary ?? account.noreplyEmail }
+
+        try Keychain.set(token, for: account.id.uuidString)
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            accounts[index] = account
+        } else {
+            accounts.append(account)
+        }
+        if defaultAccountID == nil { defaultAccountID = account.id }
+        return account
+    }
+
+    func removeAccount(_ account: Account) {
+        Keychain.delete(account.id.uuidString)
+        accounts.removeAll { $0.id == account.id }
+        rules.removeAll { $0.accountID == account.id }
+        for index in repos.indices where repos[index].accountOverride == account.id {
+            repos[index].accountOverride = nil
+        }
+        if defaultAccountID == account.id { defaultAccountID = accounts.first?.id }
+    }
+
+    // MARK: Repositories
+
+    func addRepositoryViaPanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Add Repository"
+        panel.message = "Choose one or more local git repositories"
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls
+        Task { for url in urls { await addRepository(at: url) } }
+    }
+
+    func addRepository(at url: URL) async {
+        do {
+            let root = try await GitRepository.topLevel(of: url)
+            if let existing = repos.first(where: { $0.path == root.path }) {
+                selectedRepoID = existing.id
+                return
+            }
+            let ref = RepoRef(path: root.path)
+            repos.append(ref)
+            repos.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            selectedRepoID = ref.id
+        } catch {
+            lastError = "\(url.lastPathComponent) isn't a git repository."
+        }
+    }
+
+    func removeRepository(_ id: RepoRef.ID) {
+        repos.removeAll { $0.id == id }
+        if selectedRepoID == id { selectedRepoID = repos.first?.id }
+    }
+
+    // MARK: Persistence
+
+    private func load() {
+        loading = true
+        defer { loading = false }
+        guard let data = try? Data(contentsOf: Self.stateURL),
+              let state = try? JSONDecoder().decode(Persisted.self, from: data) else { return }
+        accounts = state.accounts
+        rules = state.rules
+        repos = state.repos
+        defaultAccountID = state.defaultAccountID
+        githubClientID = state.githubClientID
+        selectedRepoID = state.selectedRepoID
+    }
+
+    private func save() {
+        guard !loading else { return }
+        let state = Persisted(accounts: accounts, rules: rules, repos: repos, defaultAccountID: defaultAccountID,
+                              githubClientID: githubClientID, selectedRepoID: selectedRepoID)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try? encoder.encode(state).write(to: Self.stateURL, options: .atomic)
+    }
+}

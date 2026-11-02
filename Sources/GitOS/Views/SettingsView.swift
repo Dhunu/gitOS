@@ -1,0 +1,362 @@
+import SwiftUI
+
+struct SettingsView: View {
+    var body: some View {
+        TabView {
+            Tab("Accounts", systemImage: "person.2") { AccountsSettings() }
+            Tab("Folder Rules", systemImage: "folder.badge.person.crop") { FolderRulesSettings() }
+            Tab("GitHub", systemImage: "key") { GitHubSettings() }
+        }
+        .frame(width: 680, height: 460)
+    }
+}
+
+// MARK: - Accounts
+
+private struct AccountsSettings: View {
+    @Environment(AppState.self) private var app
+    @State private var selection: Account.ID?
+    @State private var showingSignIn = false
+    @State private var pendingRemoval: Account?
+
+    var body: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                List(app.accounts, selection: $selection) { account in
+                    HStack {
+                        AvatarView(account: account, size: 24)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(account.title)
+                            Text(account.displayName).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if app.defaultAccountID == account.id {
+                            Image(systemName: "star.fill").foregroundStyle(.yellow).help("Default account")
+                        }
+                    }
+                    .tag(account.id)
+                }
+                .overlay {
+                    if app.accounts.isEmpty {
+                        Text("No accounts").foregroundStyle(.secondary)
+                    }
+                }
+                Divider()
+                HStack(spacing: 0) {
+                    Button { showingSignIn = true } label: { Image(systemName: "plus").frame(width: 24, height: 20) }
+                        .help("Add GitHub account")
+                    Button {
+                        pendingRemoval = app.account(id: selection)
+                    } label: { Image(systemName: "minus").frame(width: 24, height: 20) }
+                        .disabled(selection == nil)
+                        .help("Remove account")
+                    Spacer()
+                }
+                .buttonStyle(.borderless)
+                .padding(4)
+            }
+            .frame(width: 230)
+
+            Divider()
+
+            if let index = app.accounts.firstIndex(where: { $0.id == selection }) {
+                AccountEditor(account: Binding(
+                    get: { app.accounts[index] },
+                    set: { app.accounts[index] = $0 }
+                ), onReconnect: { showingSignIn = true })
+            } else {
+                ContentUnavailableView {
+                    Label("Your GitHub Accounts", systemImage: "person.2.badge.key")
+                } description: {
+                    Text("Sign in to each GitHub account you use. Then add folder rules so repos pick the right one automatically.")
+                } actions: {
+                    Button("Add GitHub Account…") { showingSignIn = true }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .sheet(isPresented: $showingSignIn) {
+            SignInSheet { selection = $0.id }
+        }
+        .confirmationDialog("Remove \(pendingRemoval?.title ?? "")?",
+                            isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
+                            presenting: pendingRemoval) { account in
+            Button("Remove Account", role: .destructive) {
+                app.removeAccount(account)
+                selection = nil
+            }
+        } message: { _ in
+            Text("Its token is deleted from the Keychain and folder rules that use it are removed.")
+        }
+        .onAppear { if selection == nil { selection = app.accounts.first?.id } }
+    }
+}
+
+private struct AccountEditor: View {
+    @Environment(AppState.self) private var app
+    @Binding var account: Account
+    let onReconnect: () -> Void
+    @State private var customEmail = false
+
+    var body: some View {
+        Form {
+            Section {
+                HStack(spacing: 12) {
+                    AvatarView(account: account, size: 44)
+                    VStack(alignment: .leading) {
+                        Text(account.displayName).font(.headline)
+                        Text("@\(account.login) on \(account.host)").foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Reconnect…", action: onReconnect)
+                        .help("Sign in again to refresh the token")
+                }
+                TextField("Label", text: $account.label, prompt: Text("e.g. Work, Personal"))
+                Toggle("Default account", isOn: Binding(
+                    get: { app.defaultAccountID == account.id },
+                    set: { app.defaultAccountID = $0 ? account.id : nil }
+                ))
+            }
+
+            Section("Commit identity") {
+                TextField("Name", text: $account.commitName)
+                if customEmail || !account.knownEmails.contains(account.commitEmail) {
+                    TextField("Email", text: $account.commitEmail)
+                } else {
+                    Picker("Email", selection: $account.commitEmail) {
+                        ForEach(account.knownEmails, id: \.self) { Text($0).tag($0) }
+                    }
+                }
+                Toggle("Use a custom email", isOn: $customEmail)
+            }
+
+            Section("Commit signing") {
+                Toggle("Sign commits", isOn: Binding(
+                    get: { account.signing != nil },
+                    set: { account.signing = $0 ? (account.signing ?? SigningConfig()) : nil }
+                ))
+                if let signing = account.signing {
+                    Picker("Format", selection: Binding(
+                        get: { signing.format }, set: { account.signing?.format = $0 }
+                    )) {
+                        ForEach(SigningConfig.Format.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    HStack {
+                        TextField(signing.format == .ssh ? "Public key path" : "GPG key ID",
+                                  text: Binding(get: { signing.key }, set: { account.signing?.key = $0 }),
+                                  prompt: Text(signing.format == .ssh ? "~/.ssh/id_ed25519.pub" : "3AA5C34371567BD2"))
+                        if signing.format == .ssh {
+                            Button("Choose…") { chooseSSHKey() }
+                        }
+                    }
+                    Text("Add the same key to GitHub as a **signing key** to get the Verified badge.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .onChange(of: account.id) { customEmail = false }
+    }
+
+    private func chooseSSHKey() {
+        let panel = NSOpenPanel()
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh")
+        panel.showsHiddenFiles = true
+        panel.allowedContentTypes = []
+        panel.message = "Choose the public key (.pub) to sign with"
+        if panel.runModal() == .OK, let url = panel.url {
+            account.signing?.key = url.path
+        }
+    }
+}
+
+// MARK: - Sign in (device flow)
+
+struct SignInSheet: View {
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    let onSignedIn: (Account) -> Void
+
+    enum Phase {
+        case intro
+        case requesting
+        case waiting(GitHubDeviceFlow.DeviceCode)
+        case finishing
+        case failed(String)
+    }
+
+    @State private var phase = Phase.intro
+    @State private var task: Task<Void, Never>?
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "person.badge.key.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(.tint)
+            Text("Add GitHub Account").font(.title2.weight(.semibold))
+
+            switch phase {
+            case .intro:
+                Text("GitOS signs in through your browser. **Make sure the browser is signed into the GitHub account you want to add.** To add a second account, use a private window or sign out of the first one there.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                if app.githubClientID.isEmpty {
+                    Label("Set your OAuth app's Client ID in Settings › GitHub first.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+            case .requesting, .finishing:
+                ProgressView()
+            case .waiting(let code):
+                Text("Enter this code on GitHub:").foregroundStyle(.secondary)
+                Text(code.userCode)
+                    .font(.system(size: 34, weight: .bold, design: .monospaced))
+                    .textSelection(.enabled)
+                Button("Copy Code & Open GitHub") { open(code) }
+                    .buttonStyle(.borderedProminent)
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Waiting for you to authorize…").foregroundStyle(.secondary)
+                }
+            case .failed(let message):
+                Label(message, systemImage: "xmark.octagon").foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack {
+                Button("Cancel") {
+                    task?.cancel()
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                Spacer()
+                switch phase {
+                case .intro, .failed:
+                    Button("Sign in with Browser") { start() }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(app.githubClientID.isEmpty)
+                default:
+                    EmptyView()
+                }
+            }
+        }
+        .padding(24)
+        .frame(width: 440)
+        .onDisappear { task?.cancel() }
+    }
+
+    private func start() {
+        let clientID = app.githubClientID.trimmingCharacters(in: .whitespaces)
+        phase = .requesting
+        task = Task {
+            do {
+                let code = try await GitHubDeviceFlow.requestCode(clientID: clientID)
+                phase = .waiting(code)
+                open(code)
+                let token = try await GitHubDeviceFlow.pollForToken(clientID: clientID, code: code)
+                phase = .finishing
+                let account = try await app.signIn(token: token)
+                onSignedIn(account)
+                dismiss()
+            } catch is CancellationError {
+            } catch {
+                phase = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    private func open(_ code: GitHubDeviceFlow.DeviceCode) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code.userCode, forType: .string)
+        NSWorkspace.shared.open(code.verificationURI)
+    }
+}
+
+// MARK: - Folder rules
+
+private struct FolderRulesSettings: View {
+    @Environment(AppState.self) private var app
+    @State private var selection: FolderRule.ID?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Repositories inside a folder use that folder's account. The most specific folder wins. A per-repo choice in the toolbar overrides rules.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Table(of: Binding<FolderRule>.self, selection: $selection) {
+                TableColumn("Folder") { $rule in
+                    Label(rule.folder.abbreviatingWithTildeInPath, systemImage: "folder")
+                }
+                TableColumn("Account") { $rule in
+                    Picker("Account", selection: $rule.accountID) {
+                        ForEach(app.accounts) { Text($0.title).tag($0.id) }
+                    }
+                    .labelsHidden()
+                }
+                .width(220)
+            } rows: {
+                @Bindable var app = app
+                ForEach($app.rules) { $rule in
+                    TableRow($rule)
+                }
+            }
+
+            HStack {
+                Button("Add Folder Rule…", systemImage: "plus") { addRule() }
+                    .disabled(app.accounts.isEmpty)
+                Button("Remove", systemImage: "minus") {
+                    app.rules.removeAll { $0.id == selection }
+                }
+                .disabled(selection == nil)
+                Spacer()
+                if let fallback = app.account(id: app.defaultAccountID) {
+                    Text("Everything else: \(fallback.title)").foregroundStyle(.secondary).font(.caption)
+                }
+            }
+        }
+        .padding(20)
+    }
+
+    private func addRule() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.prompt = "Choose Folder"
+        panel.message = "Repositories in this folder will use the account you pick next"
+        guard panel.runModal() == .OK, let url = panel.url, let account = app.accounts.first else { return }
+        let rule = FolderRule(folder: url.path, accountID: account.id)
+        app.rules.append(rule)
+        selection = rule.id
+    }
+}
+
+// MARK: - GitHub OAuth app
+
+private struct GitHubSettings: View {
+    @Environment(AppState.self) private var app
+
+    var body: some View {
+        @Bindable var app = app
+        Form {
+            Section {
+                TextField("OAuth Client ID", text: $app.githubClientID, prompt: Text("Ov23li…"))
+                    .font(.body.monospaced())
+            } header: {
+                Text("GitHub OAuth App")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("One-time setup. Sign-in uses your own OAuth app with Device Flow:")
+                    Text("1. Open github.com › Settings › Developer settings › OAuth Apps › New OAuth App")
+                    Text("2. Any name. Homepage and callback URL: http://localhost")
+                    Text("3. Tick **Enable Device Flow**, register, then paste the Client ID here")
+                    Link("Open GitHub OAuth app registration",
+                         destination: URL(string: "https://github.com/settings/applications/new")!)
+                        .padding(.top, 4)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
