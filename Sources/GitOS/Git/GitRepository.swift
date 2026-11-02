@@ -31,6 +31,10 @@ struct GitRepository: Sendable {
         return DiffParser.parse(output).first
     }
 
+    func stagedPatch() async throws -> String {
+        try await Git.run(["diff", "--no-ext-diff", "--cached", "--stat", "--patch", "-M"], in: url)
+    }
+
     func show(_ sha: String) async throws -> [FileDiff] {
         let output = try await Git.run(["show", "--no-ext-diff", "--format=", "-M", "--first-parent", "--patch", sha], in: url)
         return DiffParser.parse(output)
@@ -151,6 +155,24 @@ struct GitRepository: Sendable {
         }
     }
 
+    /// Checks out a pull request: same-repo PRs get a tracking branch, fork PRs a local `pr/<number>` branch.
+    func checkoutPullRequest(number: Int, headRef: String, fromFork: Bool, remote: String, context: GitContext) async throws {
+        if fromFork {
+            let local = "pr/\(number)"
+            try await Git.run(["fetch", remote, "+refs/pull/\(number)/head:refs/heads/\(local)"], in: url, context: context)
+            try await Git.run(["switch", local], in: url)
+            return
+        }
+        try await Git.run(["fetch", remote, headRef], in: url, context: context)
+        let exists = (try? await Git.run(["rev-parse", "--verify", "--quiet", "refs/heads/\(headRef)"], in: url)) != nil
+        if exists {
+            try await Git.run(["switch", headRef], in: url)
+            try await Git.run(["merge", "--ff-only", "\(remote)/\(headRef)"], in: url)
+        } else {
+            try await Git.run(["switch", "-c", headRef, "--track", "\(remote)/\(headRef)"], in: url)
+        }
+    }
+
     func fetch(context: GitContext) async throws {
         try await Git.run(["fetch", "--all", "--prune"], in: url, context: context)
     }
@@ -159,8 +181,9 @@ struct GitRepository: Sendable {
         try await Git.run(["pull", "--no-edit"], in: url, context: context)
     }
 
-    func push(remote: String, setUpstream: Bool, context: GitContext) async throws {
+    func push(remote: String, setUpstream: Bool, force: Bool = false, context: GitContext) async throws {
         var args = ["push"]
+        if force { args.append("--force-with-lease") }
         if setUpstream { args += ["--set-upstream", remote, "HEAD"] }
         try await Git.run(args, in: url, context: context)
     }

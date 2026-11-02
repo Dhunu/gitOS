@@ -7,6 +7,7 @@ struct SettingsView: View {
             Tab("Accounts", systemImage: "person.2") { AccountsSettings() }
             Tab("Folder Rules", systemImage: "folder.badge.person.crop") { FolderRulesSettings() }
             Tab("GitHub", systemImage: "key") { GitHubSettings() }
+            Tab("AI", systemImage: "sparkles") { AISettings() }
         }
         .frame(width: 680, height: 460)
     }
@@ -412,6 +413,61 @@ private struct GitHubSettings: View {
                     Link("Open GitHub OAuth app registration",
                          destination: URL(string: "https://github.com/settings/applications/new")!)
                         .padding(.top, 4)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - AI
+
+private struct AISettings: View {
+    @Environment(AppState.self) private var app
+    @State private var key = ""
+    @State private var hasKey = Claude.apiKey != nil
+    @State private var saveError: String?
+
+    var body: some View {
+        @Bindable var app = app
+        Form {
+            Section {
+                if hasKey {
+                    LabeledContent("API key") {
+                        HStack {
+                            Text("Saved in Keychain").foregroundStyle(.secondary)
+                            Button("Remove", role: .destructive) {
+                                Keychain.delete(Claude.keychainKey)
+                                hasKey = false
+                            }
+                        }
+                    }
+                } else {
+                    SecureField("Anthropic API key", text: $key, prompt: Text("sk-ant-…"))
+                    Button("Save Key") {
+                        do {
+                            try Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), for: Claude.keychainKey)
+                            key = ""
+                            hasKey = true
+                            saveError = nil
+                        } catch {
+                            saveError = error.localizedDescription
+                        }
+                    }
+                    .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
+                    if let saveError { Text(saveError).foregroundStyle(.red).font(.caption) }
+                }
+                Picker("Model", selection: $app.preferences.aiModel) {
+                    ForEach(Claude.models, id: \.id) { Text($0.name).tag($0.id) }
+                }
+            } header: {
+                Text("Claude")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Used for ✨ commit messages (⌘⇧G in the commit box) and pull request descriptions. Only the diff and commit messages you're writing about are sent.")
+                    Link("Get an API key", destination: URL(string: "https://platform.claude.com/settings/keys")!)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

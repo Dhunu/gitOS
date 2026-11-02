@@ -24,5 +24,7 @@ swift test                        # parser + real-git integration tests
 Settings › General has background fetch, notifications, the menu bar icon, and
 **Install gitos Command** (then `gitos .` in any repo opens it in GitOS).
 
+Settings › AI takes an Anthropic API key for ✨ commit messages (⌘⇧G) and PR descriptions.
+
 Tokens live in the macOS Keychain. Account switching is done with per-command `-c` flags, so
 `~/.gitconfig` and your existing keychain entries are never modified.

@@ -77,9 +77,11 @@ enum Git {
         in directory: URL,
         context: GitContext = .none,
         input: Data? = nil,
+        environment: [String: String] = [:],
         allowedExitCodes: Set<Int32> = [0]
     ) async throws -> String {
-        let data = try await runData(args, in: directory, context: context, input: input, allowedExitCodes: allowedExitCodes)
+        let data = try await runData(args, in: directory, context: context, input: input,
+                                     environment: environment, allowedExitCodes: allowedExitCodes)
         return String(decoding: data, as: UTF8.self)
     }
 
@@ -88,10 +90,11 @@ enum Git {
         in directory: URL,
         context: GitContext = .none,
         input: Data? = nil,
+        environment: [String: String] = [:],
         allowedExitCodes: Set<Int32> = [0]
     ) async throws -> Data {
         let fullArgs = ["-c", "core.quotepath=false", "-c", "color.ui=false"] + context.configArgs + args
-        let env = baseEnvironment.merging(context.environment) { $1 }
+        let env = baseEnvironment.merging(context.environment) { $1 }.merging(environment) { $1 }
         let commandName = args.first ?? ""
 
         return try await withCheckedThrowingContinuation { continuation in
@@ -134,8 +137,12 @@ enum Git {
                 if allowedExitCodes.contains(process.terminationStatus) {
                     continuation.resume(returning: outData)
                 } else {
-                    let message = String(decoding: errBox.data, as: UTF8.self)
+                    // Some commands (rebase, merge) explain conflicts on stdout rather than stderr.
+                    var message = String(decoding: errBox.data, as: UTF8.self)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if message.isEmpty {
+                        message = String(decoding: outData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
                     continuation.resume(throwing: GitFailure(
                         command: commandName, message: message, exitCode: process.terminationStatus))
                 }

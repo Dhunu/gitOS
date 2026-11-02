@@ -128,16 +128,39 @@ struct GitHubAPI: Sendable {
     }
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
+        try await send("GET", path, body: Optional<[String: String]>.none)
+    }
+
+    func send<T: Decodable, Body: Encodable>(_ method: String, _ path: String, body: Body?) async throws -> T {
         var request = URLRequest(url: URL(string: "https://api.github.com" + path)!)
+        request.httpMethod = method
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(body)
+        }
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-            throw GitHubError(message: "GitHub API \(path) returned \(http.statusCode).")
+            let detail = (try? JSONDecoder().decode(APIErrorBody.self, from: data)).map { error in
+                ([error.message] + (error.errors ?? []).map(\.message)).compactMap { $0 }.joined(separator: ": ")
+            }
+            throw GitHubError(message: detail?.nilIfEmpty ?? "GitHub API \(path) returned \(http.statusCode).")
         }
+        return try GitHubAPI.decoder.decode(T.self, from: data)
+    }
+
+    /// GitHub puts the useful part of an error in "message" and per-field "errors".
+    private struct APIErrorBody: Decodable {
+        struct Detail: Decodable { let message: String? }
+        let message: String?
+        let errors: [Detail]?
+    }
+
+    static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(T.self, from: data)
-    }
+        return decoder
+    }()
 }

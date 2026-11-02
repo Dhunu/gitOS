@@ -9,14 +9,24 @@ struct RepoView: View {
     @State private var watcher: RepoWatcher?
 
     enum Tab: String, CaseIterable {
-        case changes = "Changes", history = "History", stashes = "Stashes", worktrees = "Worktrees"
+        case changes = "Changes", history = "History", pulls = "Pull Requests", issues = "Issues"
+        case stashes = "Stashes", worktrees = "Worktrees"
     }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            if let operation = model.operation {
+                OperationBanner(model: model, operation: operation) {
+                    tab = .changes
+                    model.selectedChangeID = model.status.conflicted.first?.id
+                }
+                Divider()
+            }
             switch tab {
             case .changes: ChangesView(model: model)
             case .history: HistoryView(model: model)
+            case .pulls: PullRequestsView(model: model)
+            case .issues: IssuesView(model: model) { tab = .changes }
             case .stashes: StashesView(model: model)
             case .worktrees: WorktreesView(model: model)
             }
@@ -34,10 +44,28 @@ struct RepoView: View {
             }
             ToolbarItem { AccountMenu(model: model) }
             ToolbarItem { branchMenu }
+            ToolbarItem {
+                if let checks = model.headChecks, checks.state != .none {
+                    Menu {
+                        ForEach(Array(checks.items.enumerated()), id: \.offset) { _, item in
+                            Button {
+                                if let url = item.url { NSWorkspace.shared.open(url) }
+                            } label: {
+                                Label(item.name, systemImage: item.state == .success ? "checkmark.circle"
+                                      : item.state == .failure ? "xmark.circle" : "clock")
+                            }
+                        }
+                    } label: {
+                        ChecksBadge(checks: checks)
+                    }
+                    .help("Checks on \(model.status.branch ?? "HEAD"): \(checks.description)")
+                }
+            }
             ToolbarItem { syncButton }
         }
         .task {
             await model.refresh()
+            await model.loadGitHub()
             watcher = RepoWatcher(path: model.repo.url.path) { [model] in model.scheduleRefresh() }
         }
         .onDisappear {
@@ -81,6 +109,8 @@ struct RepoView: View {
         case .changes: model.status.staged.count + model.status.unstaged.count + model.status.conflicted.count
         case .stashes: model.stashes.count
         case .worktrees: max(model.worktrees.count - 1, 0)
+        case .pulls: model.pullRequests.count
+        case .issues: model.issues.count
         case .history: 0
         }
         return count > 0 ? "\(tab.rawValue) (\(count))" : tab.rawValue
@@ -102,6 +132,12 @@ struct RepoView: View {
                     .disabled(branch.isCurrent)
                 }
             }
+            Menu("Merge into \(model.status.branch ?? "HEAD")") {
+                ForEach(model.branches.filter { !$0.isCurrent }) { branch in
+                    Button(branch.name) { Task { await model.merge(branch.name) } }
+                }
+            }
+            .disabled(model.status.hasChanges || model.status.branch == nil)
             Divider()
             Button("New Branch…") { showingNewBranch = true }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
@@ -117,6 +153,11 @@ struct RepoView: View {
             Button("Fetch", systemImage: "arrow.clockwise") { Task { await model.fetch() } }
             Button("Pull", systemImage: "arrow.down") { Task { await model.pull() } }
             Button("Push", systemImage: "arrow.up") { Task { await model.push() } }
+            Divider()
+            Button("Force Push (with Lease)", systemImage: "exclamationmark.arrow.triangle.2.circlepath") {
+                Task { await model.forcePush() }
+            }
+            .help("Overwrites the remote branch unless someone else pushed to it since your last fetch")
         } label: {
             if let activity = model.activity {
                 Label(activity, systemImage: "hourglass")

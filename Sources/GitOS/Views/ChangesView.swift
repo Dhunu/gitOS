@@ -99,7 +99,10 @@ struct ChangesView: View {
 
     @ViewBuilder
     private var diffPane: some View {
-        if let change = model.selectedChange {
+        if let change = model.selectedChange, change.area == .conflicted {
+            ConflictEditorView(model: model, change: change)
+                .id(change.id)
+        } else if let change = model.selectedChange {
             VStack(spacing: 0) {
                 HStack {
                     Text(change.path).font(.headline).lineLimit(1).truncationMode(.middle)
@@ -220,9 +223,23 @@ struct CommitBox: View {
             .foregroundStyle(.secondary)
             .help(resolved.explanation)
 
-            TextField("Summary (required)", text: $model.summary)
-                .textFieldStyle(.roundedBorder)
-                .focused($summaryFocused)
+            HStack(spacing: 6) {
+                TextField("Summary (required)", text: $model.summary)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($summaryFocused)
+                if model.generatingMessage {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Write with Claude", systemImage: "sparkles") {
+                        Task { await model.generateCommitMessage() }
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .disabled(model.status.staged.isEmpty || Claude.apiKey == nil)
+                    .help(Claude.apiKey == nil ? "Add an Anthropic API key in Settings › AI" : "Write the message from the staged changes with Claude")
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
+                }
+            }
 
             TextEditor(text: $model.details)
                 .font(.body)

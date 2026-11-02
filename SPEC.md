@@ -58,11 +58,18 @@ Account resolution for a repo: repo override → longest matching folder rule �
 - `gitos` CLI (Settings › General installs it), opens/adds the repo
 - Background fetch per account (interval in Settings), FSEvents auto-refresh, "new commits upstream" notifications
 
-**Phase 3**
-- Pull requests (list, create, checkout), checks status on branches/PRs, issues
-- Interactive rebase UI (reorder/squash/fixup/reword/drop)
-- 3-way conflict editor
-- AI commit message / PR description (Claude API, key in Keychain)
+**Phase 3 — done**
+- Pull Requests tab: open PRs with checks and labels, check out (same-repo → tracking branch, fork → `pr/<n>`),
+  open on GitHub, create PR (pushes first, base picker, draft, ✨ title/description from commits + diff)
+- Checks badge in the toolbar for HEAD (check runs + commit statuses), per-PR checks
+- Issues tab: list/filter, create, "Close with next commit" (`Fixes #n`) / "Reference" (`Refs #n`)
+- Interactive rebase from History (reorder, pick/reword/squash/fixup/drop) driven through
+  `GIT_SEQUENCE_EDITOR`; rewords use `exec git commit --amend -F`; warns when rewriting pushed commits
+- Banner for stopped rebase/merge/cherry-pick/revert with Continue / Skip / Abort; Merge branch; Force push with lease
+- 3-way conflict editor: per-conflict ours / base (diff3) / theirs, both orders, custom edit, editable result,
+  whole-file ours/theirs/delete; CRLF-safe
+- ✨ Commit messages and PR descriptions with Claude (Messages API, `claude-opus-5-5` by default, effort `low`,
+  server-side refusal fallback); key in Keychain, model in Settings › AI
 
 ## Setup note
 

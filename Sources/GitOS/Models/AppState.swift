@@ -7,6 +7,20 @@ struct Preferences: Codable, Equatable, Sendable {
     var fetchIntervalMinutes = 10
     var notifyNewCommits = true
     var showMenuBarExtra = true
+    var aiModel = Claude.defaultModel
+
+    init() {}
+
+    // Decode field by field so preferences saved by older builds keep working.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = Preferences()
+        backgroundFetch = try c.decodeIfPresent(Bool.self, forKey: .backgroundFetch) ?? d.backgroundFetch
+        fetchIntervalMinutes = try c.decodeIfPresent(Int.self, forKey: .fetchIntervalMinutes) ?? d.fetchIntervalMinutes
+        notifyNewCommits = try c.decodeIfPresent(Bool.self, forKey: .notifyNewCommits) ?? d.notifyNewCommits
+        showMenuBarExtra = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarExtra) ?? d.showMenuBarExtra
+        aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel) ?? d.aiModel
+    }
 }
 
 /// Last known state of a repository, kept fresh by background sync for the sidebar and menu bar.

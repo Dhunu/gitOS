@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HistoryView: View {
     @Bindable var model: RepoModel
+    @State private var rebaseCommits: [Commit]?
 
     var body: some View {
         HSplitView {
@@ -11,6 +12,8 @@ struct HistoryView: View {
                     .tag(commit.id)
                     .listRowInsets(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 8))
                     .contextMenu {
+                        Button("Interactive Rebase from Here…") { startRebase(from: commit) }
+                        Divider()
                         Button("Copy SHA") { copy(commit.sha) }
                         if let web = model.primaryRemote?.webURL {
                             Button("View on GitHub") {
@@ -40,6 +43,12 @@ struct HistoryView: View {
 
             detail
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .sheet(item: Binding(
+            get: { rebaseCommits.map { RebaseRequest(commits: $0) } },
+            set: { if $0 == nil { rebaseCommits = nil } }
+        )) { request in
+            InteractiveRebaseSheet(model: model, commits: request.commits)
         }
     }
 
@@ -81,6 +90,27 @@ struct HistoryView: View {
         } else {
             ContentUnavailableView("Select a Commit", systemImage: "clock.arrow.circlepath")
         }
+    }
+
+    /// Rewrites `commit` and everything after it on the current branch.
+    private func startRebase(from commit: Commit) {
+        // The History list may include other branches; walk first parents back from HEAD instead.
+        let bySHA = Dictionary(model.commits.map { ($0.sha, $0) }, uniquingKeysWith: { a, _ in a })
+        guard let head = model.status.oid, var current = bySHA[head] else { return }
+        var chain: [Commit] = [current]
+        while current.sha != commit.sha {
+            guard let parent = current.parents.first, let next = bySHA[parent] else {
+                model.errorMessage = "\(commit.shortSHA) isn't an ancestor of the current branch."
+                return
+            }
+            current = next
+            chain.append(current)
+        }
+        if chain.contains(where: { $0.parents.count > 1 }) {
+            model.errorMessage = "Interactive rebase over merge commits isn't supported. Pick a commit after the last merge."
+            return
+        }
+        rebaseCommits = chain.reversed()
     }
 
     private func copy(_ text: String) {
@@ -175,4 +205,9 @@ private struct GraphCell: View {
     }
 
     nonisolated static func color(_ column: Int) -> Color { palette[column % palette.count] }
+}
+
+private struct RebaseRequest: Identifiable {
+    let commits: [Commit]
+    var id: String { commits.map(\.sha).joined() }
 }

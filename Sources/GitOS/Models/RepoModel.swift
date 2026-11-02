@@ -6,7 +6,7 @@ import Observation
 final class RepoModel {
     let repoID: RepoRef.ID
     let repo: GitRepository
-    private let app: AppState
+    let app: AppState
 
     var status = RepoStatus()
     var branches: [Branch] = []
@@ -17,6 +17,7 @@ final class RepoModel {
     var worktrees: [Worktree] = []
     var selectedStashID: Stash.ID? { didSet { if oldValue != selectedStashID { Task { await loadStashDiff() } } } }
     var stashDiffs: [FileDiff] = []
+    var operation: RepoOperation?
     var showAllBranches = false { didSet { Task { await refresh() } } }
 
     var selectedChangeID: FileChange.ID? { didSet { if oldValue != selectedChangeID { Task { await loadDiff() } } } }
@@ -24,9 +25,19 @@ final class RepoModel {
     var selectedCommitID: Commit.ID? { didSet { if oldValue != selectedCommitID { Task { await loadCommitDiff() } } } }
     var commitDiffs: [FileDiff] = []
 
+    // GitHub (see RepoModel+GitHub.swift)
+    var pullRequests: [GitHubRepoAPI.PullRequest] = []
+    var issues: [GitHubRepoAPI.Issue] = []
+    var headChecks: CheckSummary?
+    var prChecks: [Int: CheckSummary] = [:]
+    var defaultBranch: String?
+    var githubError: String?
+    var githubLoadedAt: Date?
+
     var summary = ""
     var details = ""
     var coAuthors: [Person] = []
+    var generatingMessage = false
     var extraPeople: [Person] = []
 
     var activity: String?
@@ -92,6 +103,7 @@ final class RepoModel {
             async let commits = status.isUnborn ? [] : repo.log(allBranches: showAllBranches)
             self.branches = try await branches
             self.remotes = (try? await remotes) ?? []
+            operation = await repo.operationInProgress()
             stashes = (try? await repo.stashes()) ?? []
             worktrees = (try? await repo.worktrees()) ?? []
             if !stashes.contains(where: { $0.id == selectedStashID }) { selectedStashID = stashes.first?.id }
@@ -124,7 +136,7 @@ final class RepoModel {
 
     // MARK: Actions
 
-    private func perform(_ label: String, _ work: () async throws -> Void) async {
+    func perform(_ label: String, _ work: () async throws -> Void) async {
         activity = label
         defer { activity = nil }
         do {
@@ -191,6 +203,21 @@ final class RepoModel {
         }
     }
 
+    /// Fills the summary and description from the staged diff using Claude.
+    func generateCommitMessage() async {
+        generatingMessage = true
+        defer { generatingMessage = false }
+        do {
+            let diff = try await repo.stagedPatch()
+            let (title, body) = try await Claude.commitMessage(
+                diff: diff, recentSubjects: commits.map(\.subject), model: app.preferences.aiModel)
+            summary = title
+            details = body
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func switchBranch(_ name: String) async {
         await perform("Switching to \(name)") { try await repo.switchBranch(name) }
     }
@@ -222,6 +249,7 @@ final class RepoModel {
     func fetch() async {
         let context = app.gitContext(for: ref)
         await perform("Fetching") { try await repo.fetch(context: context) }
+        await loadGitHub(force: true)
     }
 
     func pull() async {
@@ -230,6 +258,43 @@ final class RepoModel {
     }
 
     /// Pushes, first checking that unpushed commits were authored by the account that will push them.
+    func forcePush() async {
+        let context = app.gitContext(for: ref)
+        let remote = primaryRemote?.name ?? "origin"
+        await perform("Force pushing") {
+            try await repo.push(remote: remote, setUpstream: status.upstream == nil, force: true, context: context)
+        }
+        await loadGitHub(force: true)
+    }
+
+    // MARK: Rebase & merge
+
+    func interactiveRebase(steps: [RebaseStep], base: String?) async {
+        let context = app.gitContext(for: ref)
+        await perform("Rebasing") { try await repo.interactiveRebase(base: base, steps: steps, context: context) }
+    }
+
+    func continueOperation() async {
+        guard let operation else { return }
+        let context = app.gitContext(for: ref)
+        await perform("Continuing \(operation.command)") { try await repo.continueOperation(operation, context: context) }
+    }
+
+    func abortOperation() async {
+        guard let operation else { return }
+        await perform("Aborting \(operation.command)") { try await repo.abortOperation(operation) }
+    }
+
+    func skipRebaseStep() async {
+        let context = app.gitContext(for: ref)
+        await perform("Skipping commit") { try await repo.skipRebaseStep(context: context) }
+    }
+
+    func merge(_ branch: String) async {
+        let context = app.gitContext(for: ref)
+        await perform("Merging \(branch)") { try await repo.merge(branch, context: context) }
+    }
+
     func push(force skipCheck: Bool = false) async {
         if !skipCheck, let account = resolved.account {
             let emails = (try? await repo.unpushedAuthorEmails(hasUpstream: status.upstream != nil)) ?? []
@@ -245,6 +310,7 @@ final class RepoModel {
         await perform("Pushing") {
             try await repo.push(remote: remote, setUpstream: needsUpstream, context: context)
         }
+        await loadGitHub(force: true)
     }
 
     /// The single most useful sync action for the toolbar button.
