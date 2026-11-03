@@ -177,6 +177,14 @@ struct GitRepository: Sendable {
         try await Git.run(["fetch", "--all", "--prune"], in: url, context: context)
     }
 
+    func remoteBranchExists(remote: String, branch: String) async -> Bool {
+        (try? await Git.run(["rev-parse", "--verify", "--quiet", "refs/remotes/\(remote)/\(branch)"], in: url)) != nil
+    }
+
+    func setUpstream(of branch: String, to upstream: String) async throws {
+        try await Git.run(["branch", "--set-upstream-to=\(upstream)", branch], in: url)
+    }
+
     func pull(context: GitContext) async throws {
         try await Git.run(["pull", "--no-edit"], in: url, context: context)
     }

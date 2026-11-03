@@ -15,6 +15,10 @@ struct RepoView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if model.isGitButlerWorkspace {
+                GitButlerBanner(model: model)
+                Divider()
+            }
             if let operation = model.operation {
                 OperationBanner(model: model, operation: operation) {
                     tab = .changes
@@ -168,8 +172,9 @@ struct RepoView: View {
             Task { await model.sync() }
         }
         .labelStyle(.titleAndIcon)
-        .disabled(model.isBusy || model.remotes.isEmpty)
-        .help(model.remotes.isEmpty ? "This repository has no remote" : "Fetch, pull or push")
+        .disabled(model.isBusy || model.remotes.isEmpty || model.isGitButlerWorkspace)
+        .help(model.isGitButlerWorkspace ? "GitButler manages this branch. Sync it from GitButler"
+              : model.remotes.isEmpty ? "This repository has no remote" : "Fetch, pull or push")
     }
 
     private var syncTitle: String {
@@ -301,5 +306,46 @@ struct AvatarView: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+    }
+}
+
+/// Explains that GitButler owns the checked-out branch and offers a way out.
+private struct GitButlerBanner: View {
+    let model: RepoModel
+
+    private var gitButlerApp: URL? {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.gitbutler.app")
+            ?? ["/Applications/GitButler.app"].map(URL.init(fileURLWithPath:))
+                .first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "square.stack.3d.up.fill").foregroundStyle(.purple).font(.title3)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Managed by GitButler").font(.headline)
+                Text("“\(model.status.branch ?? "")” is GitButler's workspace branch. Push and pull from GitButler, or switch to one of your branches to use GitOS.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if let app = gitButlerApp {
+                Button("Open GitButler") {
+                    NSWorkspace.shared.open([model.repo.url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+                }
+            }
+            Menu("Switch Branch") {
+                ForEach(model.branches.filter { !$0.isCurrent && !$0.name.hasPrefix("gitbutler/") }) { branch in
+                    Button(branch.upstream.map { "\(branch.name)  →  \($0)" } ?? branch.name) {
+                        Task { await model.switchBranch(branch.name) }
+                    }
+                }
+            }
+            .fixedSize()
+            .disabled(model.isBusy)
+            .help(model.status.hasChanges ? "Switching may fail while there are uncommitted changes" : "Leave GitButler's workspace")
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(Color.purple.opacity(0.1))
     }
 }

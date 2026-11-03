@@ -252,13 +252,43 @@ final class RepoModel {
         await loadGitHub(force: true)
     }
 
-    func pull() async {
-        let context = app.gitContext(for: ref)
-        await perform("Pulling") { try await repo.pull(context: context) }
+    /// GitButler keeps its virtual branches merged on `gitbutler/workspace`. Pushing, pulling or
+    /// publishing that branch with plain git would break GitButler's state and leak its internal commit.
+    var isGitButlerWorkspace: Bool { status.branch?.hasPrefix("gitbutler/") == true }
+
+    private var gitButlerBlocked: Bool {
+        guard isGitButlerWorkspace else { return false }
+        errorMessage = "\(status.branch ?? "This branch") is managed by GitButler. Pull and push from GitButler, or switch to one of your own branches to use GitOS."
+        return true
     }
 
-    /// Pushes, first checking that unpushed commits were authored by the account that will push them.
+    func pull() async {
+        guard !gitButlerBlocked else { return }
+        let context = app.gitContext(for: ref)
+        guard status.upstream == nil else {
+            await perform("Pulling") { try await repo.pull(context: context) }
+            return
+        }
+        // No tracking branch: link to <remote>/<branch> if the remote has it, otherwise explain.
+        guard let branch = status.branch else {
+            errorMessage = "You're not on a branch (detached HEAD), so there's nothing to pull into. Switch to a branch first."
+            return
+        }
+        let remote = primaryRemote?.name ?? "origin"
+        await perform("Pulling") {
+            try await repo.fetch(context: context)
+            guard await repo.remoteBranchExists(remote: remote, branch: branch) else {
+                throw GitFailure(command: "pull",
+                                 message: "“\(branch)” isn't on \(remote) yet, so there's nothing to pull. Use Publish to push it first.",
+                                 exitCode: 1)
+            }
+            try await repo.setUpstream(of: branch, to: "\(remote)/\(branch)")
+            try await repo.pull(context: context)
+        }
+    }
+
     func forcePush() async {
+        guard !gitButlerBlocked else { return }
         let context = app.gitContext(for: ref)
         let remote = primaryRemote?.name ?? "origin"
         await perform("Force pushing") {
@@ -295,7 +325,9 @@ final class RepoModel {
         await perform("Merging \(branch)") { try await repo.merge(branch, context: context) }
     }
 
+    /// Pushes, first checking that unpushed commits were authored by the account that will push them.
     func push(force skipCheck: Bool = false) async {
+        guard !gitButlerBlocked else { return }
         if !skipCheck, let account = resolved.account {
             let emails = (try? await repo.unpushedAuthorEmails(hasUpstream: status.upstream != nil)) ?? []
             let foreign = emails.filter { !account.owns(email: $0) }.sorted()
@@ -315,6 +347,7 @@ final class RepoModel {
 
     /// The single most useful sync action for the toolbar button.
     func sync() async {
+        guard !gitButlerBlocked else { return }
         if status.upstream == nil || status.ahead > 0 && status.behind == 0 {
             await push()
         } else if status.behind > 0 {

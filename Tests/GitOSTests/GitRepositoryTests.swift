@@ -148,3 +148,24 @@ extension GitRepositoryTests {
         #expect(try await repo.worktrees().count == 1)
     }
 }
+
+extension GitRepositoryTests {
+    /// A branch without an upstream can be linked to <remote>/<branch> and pulled; one missing on the remote can't.
+    @Test func linksMissingUpstreamBeforePulling() async throws {
+        try write("r.txt", "1\n")
+        try await repo.stage(["r.txt"])
+        try await repo.commit(message: "One", context: identity)
+
+        let remoteDir = repo.url.path + "-remote.git"
+        try await Git.run(["clone", "-q", "--bare", repo.url.path, remoteDir], in: repo.url.deletingLastPathComponent())
+        try await Git.run(["remote", "add", "origin", remoteDir], in: repo.url)
+        try await Git.run(["fetch", "-q", "origin"], in: repo.url)
+        #expect(try await repo.status().upstream == nil)
+
+        #expect(await repo.remoteBranchExists(remote: "origin", branch: "main"))
+        #expect(await !repo.remoteBranchExists(remote: "origin", branch: "nope"))
+        try await repo.setUpstream(of: "main", to: "origin/main")
+        #expect(try await repo.status().upstream == "origin/main")
+        try await repo.pull(context: identity)
+    }
+}
