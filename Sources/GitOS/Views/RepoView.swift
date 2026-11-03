@@ -326,9 +326,13 @@ private struct GitButlerBanner: View {
                 Text("Managed by GitButler").font(.headline)
                 Text("“\(model.status.branch ?? "")” is GitButler's workspace branch. Push and pull from GitButler, or switch to one of your branches to use GitOS.")
                     .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    // A fixed vertical size here made the window's minimum height enormous (text wrapped
+                    // word-by-word at the narrowest layout), pushing all content off-screen.
+                    .lineLimit(2)
+                    .help("GitOS won't pull, push or publish GitButler's workspace branch.")
             }
-            Spacer()
+            .layoutPriority(1)
+            Spacer(minLength: 8)
             if let app = gitButlerApp {
                 Button("Open GitButler") {
                     NSWorkspace.shared.open([model.repo.url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
