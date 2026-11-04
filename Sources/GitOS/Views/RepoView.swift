@@ -11,10 +11,23 @@ struct RepoView: View {
     enum Tab: String, CaseIterable {
         case changes = "Changes", history = "History", pulls = "Pull Requests", issues = "Issues"
         case stashes = "Stashes", worktrees = "Worktrees"
+
+        var icon: String {
+            switch self {
+            case .changes: "square.and.pencil"
+            case .history: "clock.arrow.circlepath"
+            case .pulls: "arrow.triangle.pull"
+            case .issues: "smallcircle.filled.circle"
+            case .stashes: "tray.full"
+            case .worktrees: "square.stack.3d.up"
+            }
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
+            RepoTabBar(selection: $tab, count: count(for:))
+            Divider()
             if model.isGitButlerWorkspace {
                 GitButlerBanner(model: model)
                 Divider()
@@ -34,18 +47,13 @@ struct RepoView: View {
             case .stashes: StashesView(model: model)
             case .worktrees: WorktreesView(model: model)
             }
+            Divider()
+            RepoStatusBar(model: model)
         }
+        .background(Theme.canvas)
         .navigationTitle(model.ref.name)
         .navigationSubtitle(model.status.branch ?? "detached HEAD")
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("View", selection: $tab) {
-                    ForEach(Tab.allCases, id: \.self) { tab in
-                        Text(title(for: tab))
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
             ToolbarItem { AccountMenu(model: model) }
             ToolbarItem { branchMenu }
             ToolbarItem {
@@ -108,8 +116,8 @@ struct RepoView: View {
         }
     }
 
-    private func title(for tab: Tab) -> String {
-        let count = switch tab {
+    private func count(for tab: Tab) -> Int {
+        switch tab {
         case .changes: model.status.staged.count + model.status.unstaged.count + model.status.conflicted.count
         case .stashes: model.stashes.count
         case .worktrees: max(model.worktrees.count - 1, 0)
@@ -117,7 +125,6 @@ struct RepoView: View {
         case .issues: model.issues.count
         case .history: 0
         }
-        return count > 0 ? "\(tab.rawValue) (\(count))" : tab.rawValue
     }
 
     private var branchMenu: some View {
@@ -309,6 +316,100 @@ struct AvatarView: View {
     }
 }
 
+/// The repository's sections. These live under the toolbar, because in the toolbar they pushed
+/// the account, branch and sync controls into its overflow menu.
+private struct RepoTabBar: View {
+    @Binding var selection: RepoView.Tab
+    let count: (RepoView.Tab) -> Int
+    @Namespace private var underline
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(RepoView.Tab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) { selection = tab }
+                } label: {
+                    label(for: tab)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .background(Theme.panel)
+    }
+
+    private func label(for tab: RepoView.Tab) -> some View {
+        let selected = tab == selection
+        return HStack(spacing: 5) {
+            Image(systemName: tab.icon).font(.caption)
+            Text(tab.rawValue).font(.callout.weight(selected ? .semibold : .regular))
+            if count(tab) > 0 {
+                Text("\(count(tab))")
+                    .font(.caption2.monospacedDigit().weight(.medium))
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background((selected ? Theme.accent : Color.secondary).opacity(0.16), in: Capsule())
+            }
+        }
+        .lineLimit(1)
+        .foregroundStyle(selected ? Theme.accent : .secondary)
+        .padding(.horizontal, 10)
+        .frame(height: 34)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) {
+            if selected {
+                Rectangle().fill(Theme.accent).frame(height: 2)
+                    .matchedGeometryEffect(id: "underline", in: underline)
+            }
+        }
+    }
+}
+
+/// The strip along the bottom of the window: where HEAD is and how it relates to the remote.
+private struct RepoStatusBar: View {
+    let model: RepoModel
+
+    private var changes: Int {
+        model.status.staged.count + model.status.unstaged.count + model.status.conflicted.count
+    }
+
+    var body: some View {
+        let status = model.status
+        HStack(spacing: 14) {
+            HStack(spacing: 5) {
+                Circle().fill(Theme.head).frame(width: 7, height: 7)
+                Text(status.branch ?? "detached HEAD").foregroundStyle(.primary)
+            }
+            if let upstream = status.upstream {
+                Text(upstream).foregroundStyle(.tertiary)
+                if status.behind > 0 { Text("↓\(status.behind)").foregroundStyle(Theme.modified) }
+                if status.ahead > 0 { Text("↑\(status.ahead)").foregroundStyle(Theme.accent) }
+            } else {
+                Text("no upstream").foregroundStyle(.tertiary)
+            }
+            Spacer(minLength: 8)
+            if let activity = model.activity {
+                Text(activity)
+            } else if !status.conflicted.isEmpty {
+                Text("\(status.conflicted.count) conflicted").foregroundStyle(Theme.conflict)
+            } else if changes > 0 {
+                Text("\(changes) changed").foregroundStyle(Theme.modified)
+            } else {
+                Text("clean").foregroundStyle(Theme.added)
+            }
+            if let oid = status.oid {
+                Text(oid.prefix(7)).foregroundStyle(.tertiary)
+            }
+        }
+        .font(.caption.monospaced())
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .padding(.horizontal, 12)
+        .frame(height: 24)
+        .background(Theme.panel)
+    }
+}
+
 /// Explains that GitButler owns the checked-out branch and offers a way out.
 private struct GitButlerBanner: View {
     let model: RepoModel
@@ -321,7 +422,7 @@ private struct GitButlerBanner: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "square.stack.3d.up.fill").foregroundStyle(.purple).font(.title3)
+            Image(systemName: "square.stack.3d.up.fill").foregroundStyle(Theme.conflict).font(.title3)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Managed by GitButler").font(.headline)
                 Text("“\(model.status.branch ?? "")” is GitButler's workspace branch. Push and pull from GitButler, or switch to one of your branches to use GitOS.")
@@ -350,6 +451,6 @@ private struct GitButlerBanner: View {
             .help(model.status.hasChanges ? "Switching may fail while there are uncommitted changes" : "Leave GitButler's workspace")
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.purple.opacity(0.1))
+        .background(Theme.conflict.opacity(0.1))
     }
 }

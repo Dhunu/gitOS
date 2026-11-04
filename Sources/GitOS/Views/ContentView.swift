@@ -13,17 +13,14 @@ struct ContentView: View {
                 RepoView(model: RepoModel(ref: repo, app: app))
                     .id(repo.id)
             } else {
-                ContentUnavailableView {
-                    Label("No Repository Selected", systemImage: "arrow.triangle.branch")
-                } description: {
-                    Text("Add a local git repository to get started.")
-                } actions: {
+                GitOSWelcome(title: "Welcome to GitOS", message: "Add a local git repository to get started.") {
                     HStack {
                         Button("Add Local Repository…") { app.addRepositoryViaPanel() }
                         Button("Clone Repository…") { app.showingClone = true }
                             .buttonStyle(.borderedProminent)
                     }
                 }
+                .background(Theme.canvas)
             }
         }
         .sheet(isPresented: $app.showingClone) {
@@ -74,6 +71,14 @@ struct SidebarView: View {
                 .help("Add or clone a repository")
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack(spacing: 8) {
+                GitOSMark(size: 20)
+                Text("GitOS").font(.system(.headline, design: .rounded).weight(.semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 14).padding(.vertical, 8)
+        }
         .safeAreaInset(edge: .bottom) {
             DefaultAccountFooter()
         }
@@ -92,8 +97,7 @@ private struct RepoRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: "folder")
-                .foregroundStyle(.secondary)
+            RepoTile(name: repo.name)
             VStack(alignment: .leading, spacing: 1) {
                 Text(repo.name)
                 Text((repo.path as NSString).deletingLastPathComponent.abbreviatingWithTildeInPath)
@@ -111,6 +115,20 @@ private struct RepoRow: View {
                     .help("\(account.title): \(resolved.explanation)")
             }
         }
+    }
+}
+
+/// A repository's icon: its initial on a tint chosen from its name, so repos are easy to tell apart.
+struct RepoTile: View {
+    let name: String
+
+    var body: some View {
+        let tint = Theme.lane(for: name)
+        Text(name.prefix(1).uppercased())
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(tint)
+            .frame(width: 24, height: 24)
+            .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 6))
     }
 }
 
@@ -149,14 +167,14 @@ struct SummaryBadges: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if summary.behind > 0 { Text("↓\(summary.behind)").foregroundStyle(.orange) }
-            if summary.ahead > 0 { Text("↑\(summary.ahead)").foregroundStyle(.blue) }
+            if summary.behind > 0 { Text("↓\(summary.behind)").foregroundStyle(Theme.modified) }
+            if summary.ahead > 0 { Text("↑\(summary.ahead)").foregroundStyle(Theme.accent) }
             if summary.changes > 0 {
-                Circle().fill(.secondary).frame(width: 6, height: 6)
+                Circle().fill(Theme.head).frame(width: 6, height: 6)
                     .help("\(summary.changes) uncommitted change\(summary.changes == 1 ? "" : "s")")
             }
             if summary.fetchError != nil {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
                     .help(summary.fetchError ?? "")
             }
         }

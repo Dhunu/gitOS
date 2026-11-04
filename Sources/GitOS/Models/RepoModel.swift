@@ -107,7 +107,8 @@ final class RepoModel {
             stashes = (try? await repo.stashes()) ?? []
             worktrees = (try? await repo.worktrees()) ?? []
             if !stashes.contains(where: { $0.id == selectedStashID }) { selectedStashID = stashes.first?.id }
-            self.commits = (try? await commits) ?? []
+            // A cancelled or failed load must not blank a history that's already on screen.
+            if let commits = try? await commits { self.commits = commits }
             if status.change(id: selectedChangeID) == nil {
                 selectedChangeID = (status.conflicted + status.unstaged + status.staged).first?.id
             } else {

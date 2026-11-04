@@ -26,6 +26,7 @@ struct PullRequestsView: View {
                                                description: Text(model.githubError ?? ""))
                     }
                 }
+                .canvasList()
                 .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
 
                 detail.frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -48,7 +49,7 @@ struct PullRequestsView: View {
                 .labelStyle(.iconOnly)
         }
         .padding(8)
-        .background(.bar)
+        .background(Theme.panel)
     }
 
     @ViewBuilder
@@ -115,7 +116,7 @@ private struct PullRequestRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "arrow.triangle.pull")
-                .foregroundStyle(pr.draft == true ? Color.secondary : .green)
+                .foregroundStyle(pr.draft == true ? Color.secondary : Theme.added)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(pr.title).lineLimit(2)
@@ -159,9 +160,9 @@ struct ChecksBadge: View {
     var body: some View {
         Group {
             switch checks.state {
-            case .success: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-            case .failure: Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
-            case .pending: Image(systemName: "clock.fill").foregroundStyle(.orange)
+            case .success: Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.added)
+            case .failure: Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.removed)
+            case .pending: Image(systemName: "clock.fill").foregroundStyle(Theme.modified)
             case .none: EmptyView()
             }
         }
@@ -250,7 +251,7 @@ struct CreatePullRequestSheet: View {
                 Text("The branch will be pushed first.").font(.caption).foregroundStyle(.secondary)
             }
             if let error {
-                Text(error).foregroundStyle(.red)
+                Text(error).foregroundStyle(Theme.removed)
             }
         }
         .formStyle(.grouped)

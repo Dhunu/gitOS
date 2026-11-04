@@ -53,7 +53,7 @@ struct ConflictEditorView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
             Text(change.path).font(.headline).lineLimit(1).truncationMode(.middle)
             Spacer()
             if !conflicts.isEmpty {
@@ -104,18 +104,18 @@ struct ConflictEditorView: View {
                 Text("Conflict \(number) of \(conflicts.count)").font(.headline)
                 if let resolution {
                     Label(label(for: resolution), systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.callout)
+                        .foregroundStyle(Theme.added).font(.callout)
                     Button("Undo") { resolutions[conflict.id] = nil }.buttonStyle(.borderless).font(.callout)
                 }
                 Spacer()
             }
             HStack(alignment: .top, spacing: 8) {
-                side(title: "Ours", label: conflict.oursLabel, text: conflict.ours, tint: .green,
+                side(title: "Ours", label: conflict.oursLabel, text: conflict.ours, tint: Theme.added,
                      chosen: resolution == .ours) { resolutions[conflict.id] = .ours }
                 if showBase, let base = conflict.base {
-                    side(title: "Base", label: "common ancestor", text: base, tint: .gray, chosen: false, choose: nil)
+                    side(title: "Base", label: "common ancestor", text: base, tint: .secondary, chosen: false, choose: nil)
                 }
-                side(title: "Theirs", label: conflict.theirsLabel, text: conflict.theirs, tint: .blue,
+                side(title: "Theirs", label: conflict.theirsLabel, text: conflict.theirs, tint: Theme.renamed,
                      chosen: resolution == .theirs) { resolutions[conflict.id] = .theirs }
             }
             HStack {
@@ -130,7 +130,7 @@ struct ConflictEditorView: View {
         }
         .padding(10)
         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(resolution == nil ? Color.orange.opacity(0.6) : .green.opacity(0.5)))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(resolution == nil ? Theme.modified.opacity(0.6) : Theme.added.opacity(0.5)))
     }
 
     private func side(title: String, label: String, text: String, tint: Color, chosen: Bool,

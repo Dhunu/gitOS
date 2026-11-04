@@ -21,7 +21,7 @@ struct IssuesView: View {
                 List(filtered, selection: $selection) { issue in
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(alignment: .top) {
-                            Image(systemName: "smallcircle.filled.circle").foregroundStyle(.green)
+                            Image(systemName: "smallcircle.filled.circle").foregroundStyle(Theme.added)
                             Text(issue.title).lineLimit(2)
                         }
                         HStack(spacing: 4) {
@@ -51,7 +51,7 @@ struct IssuesView: View {
                         Button("New Issue…", systemImage: "plus") { showingNew = true }
                     }
                     .padding(8)
-                    .background(.bar)
+                    .background(Theme.panel)
                 }
                 .overlay {
                     if model.issues.isEmpty {
@@ -59,6 +59,7 @@ struct IssuesView: View {
                                                description: Text(model.githubError ?? ""))
                     }
                 }
+                .canvasList()
                 .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
 
                 detail.frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -127,7 +128,7 @@ private struct NewIssueSheet: View {
             Section("Description (Markdown)") {
                 TextEditor(text: $bodyText).font(.body.monospaced()).frame(minHeight: 160)
             }
-            if let error { Text(error).foregroundStyle(.red) }
+            if let error { Text(error).foregroundStyle(Theme.removed) }
         }
         .formStyle(.grouped)
         .frame(width: 520, height: 400)

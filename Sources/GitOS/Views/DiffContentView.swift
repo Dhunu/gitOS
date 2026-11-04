@@ -103,12 +103,12 @@ struct DiffContentView: View {
                 .buttonStyle(.borderless)
                 .labelStyle(.titleAndIcon)
                 .font(.caption)
-                .foregroundStyle(button.destructive ? .red : .accentColor)
+                .foregroundStyle(button.destructive ? Theme.removed : Theme.accent)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Color.blue.opacity(0.08))
+        .background(Theme.accent.opacity(0.09))
         .padding(.top, hunk.id == 0 ? 0 : 6)
     }
 }
@@ -126,11 +126,12 @@ private struct DiffLineRow: View {
                 Text(line.newLine.map(String.init) ?? "")
                     .frame(width: 44, alignment: .trailing)
             }
-            .background(isSelected ? Color.accentColor.opacity(0.35) : .clear)
+            .background(isSelected ? Theme.accent.opacity(0.35) : .clear)
             .contentShape(Rectangle())
             .onTapGesture { onGutterTap?() }
             .help(onGutterTap == nil ? "" : "Click to select this line, Shift-click for a range")
             Text(marker)
+                .foregroundStyle(line.kind == .addition ? Theme.added : Theme.removed)
                 .frame(width: 22)
             Text(line.kind == .noNewline ? line.text : line.text.isEmpty ? " " : line.text)
                 .foregroundStyle(line.kind == .noNewline ? .secondary : .primary)
@@ -140,7 +141,7 @@ private struct DiffLineRow: View {
         .padding(.vertical, 1)
         .background(background)
         .overlay(alignment: .leading) {
-            if isSelected { Rectangle().fill(Color.accentColor).frame(width: 3) }
+            if isSelected { Rectangle().fill(Theme.accent).frame(width: 3) }
         }
     }
 
@@ -154,8 +155,8 @@ private struct DiffLineRow: View {
 
     private var background: Color {
         switch line.kind {
-        case .addition: .green.opacity(isSelected ? 0.28 : 0.14)
-        case .deletion: .red.opacity(isSelected ? 0.28 : 0.14)
+        case .addition: Theme.added.opacity(isSelected ? 0.26 : 0.12)
+        case .deletion: Theme.removed.opacity(isSelected ? 0.26 : 0.12)
         default: .clear
         }
     }

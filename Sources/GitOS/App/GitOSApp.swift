@@ -10,6 +10,7 @@ struct GitOSApp: App {
         WindowGroup("GitOS", id: "main") {
             ContentView()
                 .environment(app)
+                .tint(Theme.accent)
                 .frame(minWidth: 960, minHeight: 600)
                 .task { app.sync.start() }
         }
@@ -30,11 +31,16 @@ struct GitOSApp: App {
         Settings {
             SettingsView()
                 .environment(app)
+                .tint(Theme.accent)
         }
 
-        MenuBarExtra("GitOS", systemImage: "arrow.triangle.branch", isInserted: $app.preferences.showMenuBarExtra) {
+        MenuBarExtra(isInserted: $app.preferences.showMenuBarExtra) {
             MenuBarView()
                 .environment(app)
+                .tint(Theme.accent)
+        } label: {
+            Image(nsImage: GitOSMark.menuBarImage)
+                .accessibilityLabel("GitOS")
         }
         .menuBarExtraStyle(.window)
     }

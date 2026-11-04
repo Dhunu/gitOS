@@ -34,7 +34,7 @@ struct StashesView: View {
                     Spacer()
                 }
                 .padding(8)
-                .background(.bar)
+                .background(Theme.panel)
             }
             .overlay {
                 if model.stashes.isEmpty {
@@ -42,6 +42,7 @@ struct StashesView: View {
                                            description: Text("Stash uncommitted work to set it aside."))
                 }
             }
+            .canvasList()
             .frame(minWidth: 260, idealWidth: 320, maxWidth: 480)
 
             detail
@@ -87,7 +88,7 @@ struct StashesView: View {
                             Text(diff.path).font(.headline)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 12).padding(.vertical, 8)
-                                .background(.bar)
+                                .background(Theme.panel)
                             DiffContentView(diff: diff)
                         }
                     }
@@ -109,7 +110,7 @@ struct WorktreesView: View {
         List(model.worktrees) { tree in
             HStack(spacing: 10) {
                 Image(systemName: tree.isMain ? "folder.fill" : "folder")
-                    .foregroundStyle(tree.isMain ? Color.accentColor : .secondary)
+                    .foregroundStyle(tree.isMain ? Theme.accent : .secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(tree.name).font(.headline)
@@ -136,6 +137,7 @@ struct WorktreesView: View {
                 }
             }
         }
+        .canvasList()
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack {
                 Button("New Worktree…", systemImage: "plus.rectangle.on.folder") { showingAdd = true }
@@ -144,7 +146,7 @@ struct WorktreesView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             .padding(8)
-            .background(.bar)
+            .background(Theme.panel)
         }
         .sheet(isPresented: $showingAdd) {
             NewWorktreeSheet(model: model)

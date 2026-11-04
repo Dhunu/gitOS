@@ -11,6 +11,7 @@ struct ChangesView: View {
                 fileList
                 Divider()
                 CommitBox(model: model)
+                    .background(Theme.panel)
             }
             .frame(minWidth: 280, idealWidth: 340, maxWidth: 520)
 
@@ -58,6 +59,7 @@ struct ChangesView: View {
                                        description: Text("Working tree is clean."))
             }
         }
+        .canvasList()
     }
 
     private func sectionHeader(_ title: String, count: Int, action: String, perform: @escaping () -> Void) -> some View {
@@ -110,12 +112,11 @@ struct ChangesView: View {
                         Text("← \(original)").foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
-                    Text(change.area == .staged ? "Staged" : change.area == .conflicted ? "Conflicted" : "Unstaged")
-                        .font(.caption)
-                        .padding(.horizontal, 8).padding(.vertical, 2)
-                        .background(.quaternary, in: Capsule())
+                    Pill(text: change.area == .staged ? "staged" : change.area == .conflicted ? "conflicted" : "unstaged",
+                         tint: change.area == .staged ? Theme.added : change.area == .conflicted ? Theme.conflict : Theme.modified)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(Theme.panel)
                 Divider()
                 if let diff = model.currentDiff {
                     ScrollView {
@@ -161,9 +162,9 @@ struct FileChangeRow: View {
         HStack(spacing: 8) {
             Text(change.kind.letter)
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(change.kind.color)
                 .frame(width: 16, height: 16)
-                .background(change.kind.color, in: RoundedRectangle(cornerRadius: 4))
+                .background(change.kind.color.opacity(0.16), in: RoundedRectangle(cornerRadius: 4))
             VStack(alignment: .leading, spacing: 0) {
                 Text(change.fileName).lineLimit(1)
                 if !change.directory.isEmpty {
@@ -190,11 +191,11 @@ struct FileChangeRow: View {
 extension FileChangeKind {
     var color: Color {
         switch self {
-        case .added, .untracked: .green
-        case .modified, .typeChanged: .orange
-        case .deleted: .red
-        case .renamed, .copied: .blue
-        case .conflicted: .purple
+        case .added, .untracked: Theme.added
+        case .modified, .typeChanged: Theme.modified
+        case .deleted: Theme.removed
+        case .renamed, .copied: Theme.renamed
+        case .conflicted: Theme.conflict
         }
     }
 }
@@ -212,10 +213,10 @@ struct CommitBox: View {
                     Text("\(account.commitName) <\(account.commitEmail)>")
                         .lineLimit(1).truncationMode(.middle)
                     if account.signing?.key.isEmpty == false {
-                        Image(systemName: "checkmark.seal.fill").foregroundStyle(.green).help("Commits will be signed")
+                        Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.added).help("Commits will be signed")
                     }
                 } else {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
                     Text("No account. Using global git identity")
                 }
             }
@@ -246,7 +247,7 @@ struct CommitBox: View {
                 .frame(height: 64)
                 .scrollContentBackground(.hidden)
                 .padding(4)
-                .background(.background, in: RoundedRectangle(cornerRadius: 6))
+                .background(Theme.field, in: RoundedRectangle(cornerRadius: 6))
                 .overlay(alignment: .topLeading) {
                     if model.details.isEmpty {
                         Text("Description")

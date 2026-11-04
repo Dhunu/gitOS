@@ -9,6 +9,7 @@ See [SPEC.md](SPEC.md) for decisions and the roadmap.
 ```bash
 ./scripts/build-app.sh            # → build/GitOS.app
 ./scripts/build-app.sh --install  # also copies to /Applications
+./scripts/make-icon.sh            # re-renders Resources/AppIcon.icns
 swift test                        # parser + real-git integration tests
 ```
 

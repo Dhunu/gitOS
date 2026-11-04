@@ -53,7 +53,7 @@ private struct GeneralSettings: View {
                 }
                 HStack {
                     Button(cliPath == nil ? "Install gitos Command" : "Reinstall") { installCLI() }
-                    if let cliError { Text(cliError).foregroundStyle(.red).font(.caption) }
+                    if let cliError { Text(cliError).foregroundStyle(Theme.removed).font(.caption) }
                 }
                 Text("Run `gitos .` in any repository to open it here.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -92,7 +92,7 @@ private struct AccountsSettings: View {
                         }
                         Spacer()
                         if app.defaultAccountID == account.id {
-                            Image(systemName: "star.fill").foregroundStyle(.yellow).help("Default account")
+                            Image(systemName: "star.fill").foregroundStyle(Theme.modified).help("Default account")
                         }
                     }
                     .tag(account.id)
@@ -263,7 +263,7 @@ struct SignInSheet: View {
                     .foregroundStyle(.secondary)
                 if app.githubClientID.isEmpty {
                     Label("Set your OAuth app's Client ID in Settings › GitHub first.", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.modified)
                 }
             case .requesting, .finishing:
                 ProgressView()
@@ -279,7 +279,7 @@ struct SignInSheet: View {
                     Text("Waiting for you to authorize…").foregroundStyle(.secondary)
                 }
             case .failed(let message):
-                Label(message, systemImage: "xmark.octagon").foregroundStyle(.red)
+                Label(message, systemImage: "xmark.octagon").foregroundStyle(Theme.removed)
                     .multilineTextAlignment(.center)
             }
 
@@ -457,7 +457,7 @@ private struct AISettings: View {
                         }
                     }
                     .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
-                    if let saveError { Text(saveError).foregroundStyle(.red).font(.caption) }
+                    if let saveError { Text(saveError).foregroundStyle(Theme.removed).font(.caption) }
                 }
                 Picker("Model", selection: $app.preferences.aiModel) {
                     ForEach(Claude.models, id: \.id) { Text($0.name).tag($0.id) }

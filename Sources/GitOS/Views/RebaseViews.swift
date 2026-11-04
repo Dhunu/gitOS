@@ -36,15 +36,15 @@ struct InteractiveRebaseSheet: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 if let problem {
-                    Label(problem, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Label(problem, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
                 }
                 if rewritesPushed {
                     Label("This rewrites commits that are already pushed. You'll need to force push afterwards.",
                           systemImage: "exclamationmark.arrow.triangle.2.circlepath")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.modified)
                 }
                 if model.status.hasChanges {
-                    Label("Commit or stash your changes first.", systemImage: "tray.full").foregroundStyle(.red)
+                    Label("Commit or stash your changes first.", systemImage: "tray.full").foregroundStyle(Theme.removed)
                 }
             }
             .font(.callout)
@@ -121,7 +121,7 @@ struct OperationBanner: View {
         let conflicts = model.status.conflicted.count
         HStack(spacing: 12) {
             Image(systemName: conflicts > 0 ? "exclamationmark.triangle.fill" : "arrow.triangle.merge")
-                .foregroundStyle(conflicts > 0 ? .orange : .accentColor)
+                .foregroundStyle(conflicts > 0 ? Theme.modified : Theme.accent)
                 .font(.title3)
             VStack(alignment: .leading, spacing: 1) {
                 Text(operation.title).font(.headline)
@@ -144,6 +144,6 @@ struct OperationBanner: View {
         }
         .disabled(model.isBusy)
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.orange.opacity(0.12))
+        .background(Theme.modified.opacity(0.12))
     }
 }

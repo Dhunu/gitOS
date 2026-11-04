@@ -9,9 +9,7 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                if let account = app.account(id: app.defaultAccountID) {
-                    AvatarView(account: account, size: 24)
-                }
+                GitOSMark(size: 22)
                 Menu {
                     ForEach(app.accounts) { account in
                         Button {
@@ -34,6 +32,9 @@ struct MenuBarView: View {
                 }
                 .menuStyle(.borderlessButton)
                 Spacer()
+                if let account = app.account(id: app.defaultAccountID) {
+                    AvatarView(account: account, size: 22)
+                }
             }
             .padding(12)
 

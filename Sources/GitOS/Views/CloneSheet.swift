@@ -104,7 +104,7 @@ struct CloneSheet: View {
                 Button("Change…") { chooseParent() }
                 Spacer()
                 if let cloneError {
-                    Text(cloneError).foregroundStyle(.red).lineLimit(2).font(.caption)
+                    Text(cloneError).foregroundStyle(Theme.removed).lineLimit(2).font(.caption)
                 }
             }
             .padding(.horizontal, 12).padding(.top, 10)

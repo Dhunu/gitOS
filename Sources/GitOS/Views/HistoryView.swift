@@ -32,13 +32,14 @@ struct HistoryView: View {
                     Text("\(model.commits.count) commits").font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(.bar)
+                .background(Theme.panel)
             }
             .overlay {
                 if model.commits.isEmpty {
                     ContentUnavailableView("No Commits Yet", systemImage: "clock")
                 }
             }
+            .canvasList()
             .frame(minWidth: 280, idealWidth: 360, maxWidth: 560)
 
             detail
@@ -82,7 +83,7 @@ struct HistoryView: View {
                             Spacer()
                         }
                         .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(.bar)
+                        .background(Theme.panel)
                         DiffContentView(diff: diff)
                     }
                 }
@@ -137,12 +138,8 @@ private struct CommitRow: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 ForEach(commit.refs.prefix(3), id: \.self) { ref in
-                    Text(ref.replacingOccurrences(of: "HEAD -> ", with: ""))
-                        .font(.caption2.weight(.medium))
-                        .padding(.horizontal, 5).padding(.vertical, 1)
-                        .background(ref.hasPrefix("tag:") ? Color.yellow.opacity(0.3) : Color.accentColor.opacity(0.2),
-                                    in: Capsule())
-                        .lineLimit(1)
+                    Pill(text: ref.replacingOccurrences(of: "HEAD -> ", with: ""),
+                         tint: ref.hasPrefix("tag:") ? Theme.modified : ref.hasPrefix("HEAD") ? Theme.head : Theme.accent)
                 }
                 Text(commit.subject).lineLimit(1)
             }
@@ -165,7 +162,7 @@ private struct GraphCell: View {
     let isMerge: Bool
 
     nonisolated static let laneWidth: CGFloat = 14
-    nonisolated static let palette: [Color] = [.blue, .orange, .green, .purple, .pink, .teal, .red, .yellow, .indigo, .mint]
+    nonisolated static let palette: [Color] = Theme.lanes
 
     var body: some View {
         Canvas { context, size in
@@ -194,7 +191,7 @@ private struct GraphCell: View {
             let center = CGPoint(x: x(row.column), y: size.height / 2)
             let dot = Path(ellipseIn: CGRect(x: center.x - 4.5, y: center.y - 4.5, width: 9, height: 9))
             if isMerge {
-                context.fill(dot, with: .color(.white))
+                context.fill(dot, with: .color(Theme.canvas))
                 context.stroke(dot, with: .color(Self.color(row.column)), lineWidth: 2)
             } else {
                 context.fill(dot, with: .color(Self.color(row.column)))
