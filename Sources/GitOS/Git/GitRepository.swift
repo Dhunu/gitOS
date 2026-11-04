@@ -177,6 +177,10 @@ struct GitRepository: Sendable {
         try await Git.run(["fetch", "--all", "--prune"], in: url, context: context)
     }
 
+    func addRemote(name: String, url remoteURL: String) async throws {
+        try await Git.run(["remote", "add", "--", name, remoteURL], in: url)
+    }
+
     func remoteBranchExists(remote: String, branch: String) async -> Bool {
         (try? await Git.run(["rev-parse", "--verify", "--quiet", "refs/remotes/\(remote)/\(branch)"], in: url)) != nil
     }

@@ -11,6 +11,10 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/GitOS"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+# Compiled so sidebar and list selection use the GitOS teal; SwiftUI's .tint doesn't reach them.
+xcrun actool Resources/Assets.xcassets --compile "$APP/Contents/Resources" --platform macosx \
+    --minimum-deployment-target 27.0 --output-format human-readable-text \
+    --output-partial-info-plist /dev/null >/dev/null
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -21,6 +25,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key><string>com.angelsaikia.gitos</string>
     <key>CFBundleExecutable</key><string>GitOS</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>NSAccentColorName</key><string>AccentColor</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key><string>1</string>

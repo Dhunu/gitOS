@@ -42,6 +42,7 @@ final class RepoModel {
 
     var activity: String?
     var errorMessage: String?
+    var showingAddRemote = false
     var pushWarning: PushWarning?
 
     struct PushWarning: Identifiable {
@@ -251,6 +252,25 @@ final class RepoModel {
         let context = app.gitContext(for: ref)
         await perform("Fetching") { try await repo.fetch(context: context) }
         await loadGitHub(force: true)
+    }
+
+    /// Why this remote can't be added, or nil if it can.
+    func remoteProblem(name: String, url: String) -> String? {
+        if !Self.isValidRemoteName(name) { return "Remote names can only use letters, numbers, dots, dashes and underscores." }
+        if remotes.contains(where: { $0.name == name }) { return "There's already a remote called “\(name)”." }
+        if url.isEmpty || url.hasPrefix("-") || url.contains(where: \.isWhitespace) { return "That doesn't look like a repository URL." }
+        return nil
+    }
+
+    nonisolated static func isValidRemoteName(_ name: String) -> Bool {
+        !name.isEmpty && !name.hasPrefix("-") && !name.hasPrefix(".") && !name.hasSuffix(".") && !name.contains("..")
+            && name.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || "._-".contains($0)) }
+    }
+
+    /// Adds the remote, then fetches it. An unreachable remote stays added, with the fetch error shown.
+    func addRemote(name: String, url: String) async throws {
+        try await repo.addRemote(name: name, url: url)
+        await fetch()
     }
 
     /// GitButler keeps its virtual branches merged on `gitbutler/workspace`. Pushing, pulling or

@@ -15,7 +15,7 @@ struct IssuesView: View {
 
     var body: some View {
         if let reason = model.githubUnavailableReason {
-            ContentUnavailableView("Issues Unavailable", systemImage: "smallcircle.filled.circle", description: Text(reason))
+            GitHubUnavailableView(title: "Issues Unavailable", systemImage: "smallcircle.filled.circle", reason: reason, model: model)
         } else {
             HSplitView {
                 List(filtered, selection: $selection) { issue in

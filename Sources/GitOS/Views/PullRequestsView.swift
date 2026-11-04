@@ -7,7 +7,7 @@ struct PullRequestsView: View {
 
     var body: some View {
         if let reason = model.githubUnavailableReason {
-            ContentUnavailableView("Pull Requests Unavailable", systemImage: "arrow.triangle.pull", description: Text(reason))
+            GitHubUnavailableView(title: "Pull Requests Unavailable", systemImage: "arrow.triangle.pull", reason: reason, model: model)
         } else {
             HSplitView {
                 List(model.pullRequests, selection: $selection) { pr in

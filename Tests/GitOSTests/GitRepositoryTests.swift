@@ -18,6 +18,27 @@ struct GitRepositoryTests {
         try text.write(to: repo.url.appendingPathComponent(name), atomically: true, encoding: .utf8)
     }
 
+    @Test func addRemoteParsesAndFetches() async throws {
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent("gitos-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try await Git.run(["init", "-q", "-b", "main"], in: source)
+        try await Git.run(["commit", "-q", "--allow-empty", "-m", "Remote commit"], in: source, context: identity)
+
+        try await repo.addRemote(name: "origin", url: source.path)
+        let remotes = try await repo.remotes()
+        #expect(remotes.map(\.name) == ["origin"])
+
+        try await repo.fetch(context: .none)
+        #expect(await repo.remoteBranchExists(remote: "origin", branch: "main"))
+        await #expect(throws: GitFailure.self) { try await repo.addRemote(name: "origin", url: source.path) }
+    }
+
+    @Test(arguments: ["origin", "up-stream", "my_fork.2"])
+    func acceptsRemoteName(_ name: String) { #expect(RepoModel.isValidRemoteName(name)) }
+
+    @Test(arguments: ["", "-x", "has space", "a..b", ".hidden", "a/b", "nämé"])
+    func rejectsRemoteName(_ name: String) { #expect(!RepoModel.isValidRemoteName(name)) }
+
     @Test func stageSingleHunkThenCommit() async throws {
         let lines = (1...30).map { "line \($0)" }
         try write("file.txt", lines.joined(separator: "\n") + "\n")

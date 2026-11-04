@@ -39,14 +39,19 @@ struct RepoView: View {
                 }
                 Divider()
             }
-            switch tab {
-            case .changes: ChangesView(model: model)
-            case .history: HistoryView(model: model)
-            case .pulls: PullRequestsView(model: model)
-            case .issues: IssuesView(model: model) { tab = .changes }
-            case .stashes: StashesView(model: model)
-            case .worktrees: WorktreesView(model: model)
+            // Empty states only take the height they need, so the content has to claim the rest.
+            // Otherwise the whole stack shrinks and floats in the middle of the window.
+            Group {
+                switch tab {
+                case .changes: ChangesView(model: model)
+                case .history: HistoryView(model: model)
+                case .pulls: PullRequestsView(model: model)
+                case .issues: IssuesView(model: model) { tab = .changes }
+                case .stashes: StashesView(model: model)
+                case .worktrees: WorktreesView(model: model)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
             RepoStatusBar(model: model)
         }
@@ -107,6 +112,9 @@ struct RepoView: View {
         } message: { warning in
             Text("Unpushed commits were authored as \(warning.foreignEmails.joined(separator: ", ")), which isn't an email on \(warning.account.title).")
         }
+        .sheet(isPresented: $model.showingAddRemote) {
+            AddRemoteSheet(model: model)
+        }
         .sheet(isPresented: $showingNewBranch) {
             NewBranchSheet(name: $newBranchName, base: model.status.branch) {
                 let name = newBranchName
@@ -161,27 +169,38 @@ struct RepoView: View {
 
     private var syncButton: some View {
         Menu {
-            Button("Fetch", systemImage: "arrow.clockwise") { Task { await model.fetch() } }
-            Button("Pull", systemImage: "arrow.down") { Task { await model.pull() } }
-            Button("Push", systemImage: "arrow.up") { Task { await model.push() } }
-            Divider()
-            Button("Force Push (with Lease)", systemImage: "exclamationmark.arrow.triangle.2.circlepath") {
-                Task { await model.forcePush() }
+            Group {
+                Button("Fetch", systemImage: "arrow.clockwise") { Task { await model.fetch() } }
+                Button("Pull", systemImage: "arrow.down") { Task { await model.pull() } }
+                Button("Push", systemImage: "arrow.up") { Task { await model.push() } }
+                Divider()
+                Button("Force Push (with Lease)", systemImage: "exclamationmark.arrow.triangle.2.circlepath") {
+                    Task { await model.forcePush() }
+                }
+                .help("Overwrites the remote branch unless someone else pushed to it since your last fetch")
             }
-            .help("Overwrites the remote branch unless someone else pushed to it since your last fetch")
+            .disabled(model.remotes.isEmpty)
+            Divider()
+            Button("Add Remote…", systemImage: "plus") { model.showingAddRemote = true }
         } label: {
             if let activity = model.activity {
                 Label(activity, systemImage: "hourglass")
+            } else if model.remotes.isEmpty {
+                Label("Add Remote", systemImage: "plus")
             } else {
                 Label(syncTitle, systemImage: syncIcon)
             }
         } primaryAction: {
-            Task { await model.sync() }
+            if model.remotes.isEmpty {
+                model.showingAddRemote = true
+            } else {
+                Task { await model.sync() }
+            }
         }
         .labelStyle(.titleAndIcon)
-        .disabled(model.isBusy || model.remotes.isEmpty || model.isGitButlerWorkspace)
+        .disabled(model.isBusy || (model.isGitButlerWorkspace && !model.remotes.isEmpty))
         .help(model.isGitButlerWorkspace ? "GitButler manages this branch. Sync it from GitButler"
-              : model.remotes.isEmpty ? "This repository has no remote" : "Fetch, pull or push")
+              : model.remotes.isEmpty ? "Connect this repository to a remote" : "Fetch, pull or push")
     }
 
     private var syncTitle: String {
@@ -313,6 +332,112 @@ struct AvatarView: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+    }
+}
+
+/// Shown on the GitHub tabs when they can't load. Offers to add a remote if that's what's missing.
+struct GitHubUnavailableView: View {
+    let title: String
+    let systemImage: String
+    let reason: String
+    let model: RepoModel
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: systemImage)
+        } description: {
+            Text(reason)
+        } actions: {
+            if model.remotes.isEmpty {
+                Button("Add Remote…") { model.showingAddRemote = true }
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+    }
+}
+
+private struct AddRemoteSheet: View {
+    @Bindable var model: RepoModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var urlMode = false
+    @State private var typedURL = ""
+    @State private var pickedURL: String?
+    @State private var problem: String?
+    @State private var adding = false
+
+    private var account: Account? { model.resolved.account }
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var chosenURL: String {
+        urlMode ? typedURL.trimmingCharacters(in: .whitespaces) : pickedURL ?? ""
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                TextField("Name", text: $name)
+                    .frame(maxWidth: 220)
+                Spacer()
+                Picker("Source", selection: $urlMode) {
+                    Text("From account").tag(false)
+                    Text("URL").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 200)
+                .disabled(account == nil)
+            }
+            .padding(12)
+
+            if urlMode {
+                Form {
+                    TextField("Repository URL", text: $typedURL, prompt: Text("https://github.com/owner/repo.git"))
+                    Text("SSH URLs work too. They're fetched over HTTPS with this repository's account.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .formStyle(.grouped)
+                .frame(maxHeight: .infinity, alignment: .top)
+            } else {
+                AccountRepoPicker(account: account, cloneURL: $pickedURL)
+            }
+
+            Divider()
+            HStack {
+                if let problem {
+                    Text(problem).foregroundStyle(Theme.removed).font(.caption).lineLimit(2)
+                } else if let account {
+                    Text("Uses \(account.title)").foregroundStyle(.secondary).font(.caption).lineLimit(1)
+                }
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Add Remote", action: add)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(trimmedName.isEmpty || chosenURL.isEmpty || adding)
+            }
+            .padding(12)
+        }
+        .frame(width: 620, height: 520)
+        .onAppear {
+            name = model.remotes.contains { $0.name == "origin" } ? "upstream" : "origin"
+            urlMode = account == nil
+        }
+    }
+
+    private func add() {
+        problem = model.remoteProblem(name: trimmedName, url: chosenURL)
+        guard problem == nil else { return }
+        adding = true
+        Task {
+            do {
+                try await model.addRemote(name: trimmedName, url: chosenURL)
+                dismiss()
+            } catch {
+                problem = error.localizedDescription
+            }
+            adding = false
+        }
     }
 }
 
