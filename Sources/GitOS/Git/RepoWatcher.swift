@@ -34,6 +34,9 @@ final class RepoWatcher {
         }
     }
 
+    // The stream holds an unretained pointer to self, so it can't outlive the watcher.
+    isolated deinit { stop() }
+
     func stop() {
         guard let stream else { return }
         FSEventStreamStop(stream)

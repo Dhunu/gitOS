@@ -83,6 +83,7 @@ struct RepoView: View {
         .task {
             await model.refresh()
             await model.loadGitHub()
+            guard !Task.isCancelled else { return }
             watcher = RepoWatcher(path: model.repo.url.path) { [model] in model.scheduleRefresh() }
         }
         .onDisappear {

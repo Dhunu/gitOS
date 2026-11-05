@@ -45,15 +45,17 @@ extension Color {
     }
 }
 
-/// The GitOS "G" at any size.
+/// The GitOS mark at any size.
 struct GitOSMark: View {
     var size: CGFloat = 20
 
     var body: some View {
         let rect = CGRect(x: 0, y: 0, width: size, height: size)
         ZStack {
-            Path(GitOSMarkGeometry.graph(in: rect)).fill(Theme.markGradient)
-            Path(GitOSMarkGeometry.headNode(in: rect)).fill(Theme.head)
+            Path(GitOSMarkGeometry.idleTracks(in: rect)).fill(Theme.accent.opacity(0.4))
+            Path(GitOSMarkGeometry.activeTrack(in: rect).subtracting(GitOSMarkGeometry.activeAccountBacking(in: rect)))
+                .fill(Theme.markGradient)
+            Path(GitOSMarkGeometry.activeAccount(in: rect)).fill(Theme.head)
         }
         .frame(width: size, height: size)
     }
@@ -62,8 +64,7 @@ struct GitOSMark: View {
     static var menuBarImage: NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
-            context.addPath(GitOSMarkGeometry.graph(in: rect))
-            context.addPath(GitOSMarkGeometry.headNode(in: rect))
+            context.addPath(GitOSMarkGeometry.solid(in: rect))
             context.fillPath()
             return true
         }

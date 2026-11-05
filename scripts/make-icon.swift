@@ -43,20 +43,25 @@ struct MakeIcon {
         context.setLineWidth(3)
         context.strokePath()
 
-        let markRect = body.insetBy(dx: 96, dy: 96)
+        let markRect = body.insetBy(dx: 88, dy: 88)
+
+        context.addPath(GitOSMarkGeometry.idleTracks(in: markRect))
+        context.setFillColor(color(0x5C7DA6))
+        context.fillPath()
+
         context.saveGState()
-        context.setShadow(offset: CGSize(width: 0, height: 10), blur: 34, color: color(0x2FBFAE).copy(alpha: 0.45))
+        context.setShadow(offset: CGSize(width: 0, height: 8), blur: 30, color: color(0x2FBFAE).copy(alpha: 0.45))
         context.beginTransparencyLayer(auxiliaryInfo: nil)
-        context.addPath(GitOSMarkGeometry.graph(in: markRect))
+        context.addPath(GitOSMarkGeometry.activeTrack(in: markRect).subtracting(GitOSMarkGeometry.activeAccountBacking(in: markRect)))
         context.clip()
-        context.drawLinearGradient(gradient([0x6FE9D3, 0x8FA4FF]), start: CGPoint(x: markRect.minX, y: markRect.minY),
-                                   end: CGPoint(x: markRect.maxX, y: markRect.maxY), options: [])
+        context.drawLinearGradient(gradient([0x6FE9D3, 0x4FC4DC]), start: CGPoint(x: markRect.minX, y: markRect.midY),
+                                   end: CGPoint(x: markRect.midX, y: markRect.midY), options: [.drawsAfterEndLocation])
         context.endTransparencyLayer()
         context.restoreGState()
 
         context.saveGState()
-        context.setShadow(offset: .zero, blur: 30, color: color(0xFFC978).copy(alpha: 0.55))
-        context.addPath(GitOSMarkGeometry.headNode(in: markRect))
+        context.setShadow(offset: .zero, blur: 30, color: color(0xFFC978).copy(alpha: 0.5))
+        context.addPath(GitOSMarkGeometry.activeAccount(in: markRect))
         context.setFillColor(color(0xFFC978))
         context.fillPath()
         context.restoreGState()
