@@ -201,83 +201,167 @@ extension FileChangeKind {
 }
 
 struct CommitBox: View {
+    private enum Field { case summary, description }
+
+    /// Git tooling wraps or cuts subjects past this length.
+    private static let summaryLimit = 72
+    private static let counterAppearsAt = 50
+
     @Bindable var model: RepoModel
-    @FocusState private var summaryFocused: Bool
+    @FocusState private var focus: Field?
 
     var body: some View {
-        let resolved = model.resolved
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                if let account = resolved.account {
-                    AvatarView(account: account, size: 16)
-                    Text("\(account.commitName) <\(account.commitEmail)>")
-                        .lineLimit(1).truncationMode(.middle)
-                    if account.signing?.key.isEmpty == false {
-                        Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.added).help("Commits will be signed")
-                    }
-                } else {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
-                    Text("No account. Using global git identity")
+        VStack(spacing: 10) {
+            VStack(spacing: 0) {
+                summaryField
+                Divider().padding(.horizontal, 12)
+                descriptionField
+                if !model.coAuthors.isEmpty {
+                    CoAuthorChips(model: model).padding(.horizontal, 12).padding(.bottom, 6)
                 }
+                Divider()
+                footer
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .help(resolved.explanation)
-
-            HStack(spacing: 6) {
-                TextField("Summary (required)", text: $model.summary)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($summaryFocused)
-                if model.generatingMessage {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Button("Write with AI", systemImage: "sparkles") {
-                        Task { await model.generateCommitMessage() }
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .disabled(model.status.staged.isEmpty || !model.app.preferences.aiProvider.isReady)
-                    .help(!model.app.preferences.aiProvider.isReady ? "Add an Anthropic API key in Settings › AI" : "Write the message from the staged changes with Claude")
-                    .keyboardShortcut("g", modifiers: [.command, .shift])
-                }
+            .background(Theme.field, in: RoundedRectangle(cornerRadius: 10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(focus == nil ? AnyShapeStyle(.separator) : AnyShapeStyle(Theme.accent), lineWidth: 1)
             }
-
-            TextEditor(text: $model.details)
-                .font(.body)
-                .frame(height: 64)
-                .scrollContentBackground(.hidden)
-                .padding(4)
-                .background(Theme.field, in: RoundedRectangle(cornerRadius: 6))
-                .overlay(alignment: .topLeading) {
-                    if model.details.isEmpty {
-                        Text("Description")
-                            .foregroundStyle(.tertiary)
-                            .padding(.horizontal, 9).padding(.vertical, 4)
-                            .allowsHitTesting(false)
-                    }
-                }
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator))
-
-            CoAuthorPicker(model: model)
 
             Button {
                 Task { await model.commit() }
             } label: {
-                Text(commitTitle).frame(maxWidth: .infinity)
+                Text(commitTitle).lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .keyboardShortcut(.return, modifiers: .command)
-            .disabled(!canCommit)
+            .disabled(commitBlocker != nil)
+            .help(commitBlocker ?? "Commit (⌘↩)")
         }
         .padding(12)
     }
 
-    private var canCommit: Bool {
-        !model.summary.trimmingCharacters(in: .whitespaces).isEmpty
-            && !model.status.staged.isEmpty
-            && model.status.conflicted.isEmpty
-            && !model.isBusy
+    private var summaryField: some View {
+        HStack(spacing: 8) {
+            TextField("Summary", text: $model.summary, prompt: Text("Summary").foregroundStyle(.tertiary))
+                .textFieldStyle(.plain)
+                .font(.body.weight(model.summary.isEmpty ? .regular : .medium))
+                .focused($focus, equals: .summary)
+                .onSubmit { focus = .description }
+            if model.summary.count >= Self.counterAppearsAt {
+                let isLong = model.summary.count > Self.summaryLimit
+                Text("\(model.summary.count)/\(Self.summaryLimit)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(isLong ? AnyShapeStyle(Theme.modified) : AnyShapeStyle(.tertiary))
+                    .help(isLong ? "Summaries over \(Self.summaryLimit) characters get cut off in git logs and on GitHub" : "")
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+    }
+
+    /// Grows with its text up to a limit, then scrolls.
+    private var descriptionField: some View {
+        Text(model.details.isEmpty ? " " : model.details + "\n")
+            .font(.body)
+            .hidden()
+            .padding(.horizontal, 5)
+            .frame(maxWidth: .infinity, minHeight: 56, maxHeight: 180, alignment: .topLeading)
+            .fixedSize(horizontal: false, vertical: true)
+            .overlay {
+                TextEditor(text: $model.details)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .focused($focus, equals: .description)
+            }
+            .overlay(alignment: .topLeading) {
+                if model.details.isEmpty {
+                    Text("Add a description")
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .allowsHitTesting(false)
+                }
+            }
+            .padding(.horizontal, 7).padding(.vertical, 8)
+    }
+
+    private var footer: some View {
+        ViewThatFits(in: .horizontal) {
+            footerRow(compact: false)
+            footerRow(compact: true)
+        }
+        .font(.callout)
+        .padding(.horizontal, 12).padding(.vertical, 7)
+    }
+
+    /// Compact drops the labels so a narrow list column doesn't push the card wider.
+    private func footerRow(compact: Bool) -> some View {
+        HStack(spacing: 12) {
+            aiButton(compact: compact)
+            CoAuthorMenu(model: model, compact: compact)
+            Spacer(minLength: 8)
+            commitIdentity(compact: compact)
+        }
+    }
+
+    private func aiButton(compact: Bool) -> some View {
+        let provider = model.app.preferences.aiProvider
+        let hasMessage = !model.summary.isEmpty || !model.details.isEmpty
+        return Button {
+            Task { await model.generateCommitMessage() }
+        } label: {
+            if model.generatingMessage {
+                HStack(spacing: 5) {
+                    ProgressView().controlSize(.mini)
+                    Text("Writing…")
+                }
+            } else {
+                Label(compact ? "AI" : hasMessage ? "Rewrite with AI" : "Write with AI", systemImage: "sparkles")
+            }
+        }
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .disabled(model.generatingMessage || model.status.staged.isEmpty || !provider.isReady)
+        .help(aiHelp(provider))
+        .keyboardShortcut("g", modifiers: [.command, .shift])
+    }
+
+    private func aiHelp(_ provider: AIProvider) -> String {
+        if !provider.isReady { return "Add an Anthropic API key in Settings › AI" }
+        if model.status.staged.isEmpty { return "Stage some changes first" }
+        return "Write the message from the staged changes with \(provider.name) (⌘⇧G)"
+    }
+
+    private func commitIdentity(compact: Bool) -> some View {
+        let resolved = model.resolved
+        return HStack(spacing: 5) {
+            if let account = resolved.account {
+                AvatarView(account: account, size: 16)
+                if !compact { Text(account.commitName).lineLimit(1) }
+                if account.signing?.key.isEmpty == false {
+                    Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.added)
+                }
+            } else {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
+                if !compact { Text("Global git identity").lineLimit(1) }
+            }
+        }
+        .foregroundStyle(.secondary)
+        .help(identityHelp(resolved))
+    }
+
+    private func identityHelp(_ resolved: ResolvedAccount) -> String {
+        guard let account = resolved.account else { return resolved.explanation }
+        return "\(account.commitName) <\(account.commitEmail)>\n\(resolved.explanation)"
+    }
+
+    /// Why the commit button is off, or nil when it's ready.
+    private var commitBlocker: String? {
+        if model.status.staged.isEmpty { return "Stage some changes first" }
+        if !model.status.conflicted.isEmpty { return "Resolve the conflicts first" }
+        if model.summary.trimmingCharacters(in: .whitespaces).isEmpty { return "Add a summary first" }
+        if model.isBusy { return "Waiting for the current git action" }
+        return nil
     }
 
     private var commitTitle: String {
@@ -287,67 +371,81 @@ struct CommitBox: View {
     }
 }
 
-private struct CoAuthorPicker: View {
+private struct CoAuthorMenu: View {
     @Bindable var model: RepoModel
+    var compact = false
     @State private var adding = false
     @State private var newPerson = ""
 
     var body: some View {
-        HStack(spacing: 6) {
-            Menu {
-                let people = model.knownPeople.prefix(30)
-                if people.isEmpty {
-                    Text("No recent authors")
-                }
-                ForEach(Array(people)) { person in
-                    Toggle(isOn: Binding(
-                        get: { model.coAuthors.contains(person) },
-                        set: { on in
-                            if on { model.coAuthors.append(person) } else { model.coAuthors.removeAll { $0 == person } }
-                        }
-                    )) {
-                        Text("\(person.name) <\(person.email)>")
-                    }
-                }
-                Divider()
-                Button("Add Someone Else…") { adding = true }
-            } label: {
-                Label(model.coAuthors.isEmpty ? "Co-authors" : "\(model.coAuthors.count)", systemImage: "person.2")
+        Menu {
+            let people = model.knownPeople.prefix(30)
+            if people.isEmpty {
+                Text("No recent authors")
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .help("Add Co-authored-by trailers")
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(model.coAuthors) { person in
-                        HStack(spacing: 3) {
-                            Text(person.name).lineLimit(1)
-                            Button { model.coAuthors.removeAll { $0 == person } } label: {
-                                Image(systemName: "xmark.circle.fill")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        .font(.caption)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(.quaternary, in: Capsule())
-                        .help(person.trailer)
+            ForEach(Array(people)) { person in
+                Toggle(isOn: Binding(
+                    get: { model.coAuthors.contains(person) },
+                    set: { on in
+                        if on { model.coAuthors.append(person) } else { model.coAuthors.removeAll { $0 == person } }
                     }
+                )) {
+                    Text("\(person.name) <\(person.email)>")
                 }
             }
+            Divider()
+            Button("Add Someone Else…") { adding = true }
+        } label: {
+            Label(coAuthorsLabel, systemImage: "person.2")
         }
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Add Co-authored-by trailers")
         .alert("Add Co-author", isPresented: $adding) {
-            TextField("Name <email@example.com>", text: $newPerson)
-            Button("Add") {
-                if let person = Person(parsing: newPerson) {
-                    model.extraPeople.insert(person, at: 0)
-                    if !model.coAuthors.contains(person) { model.coAuthors.append(person) }
-                }
-                newPerson = ""
+        TextField("Name <email@example.com>", text: $newPerson)
+        Button("Add") {
+            if let person = Person(parsing: newPerson) {
+                model.extraPeople.insert(person, at: 0)
+                if !model.coAuthors.contains(person) { model.coAuthors.append(person) }
             }
-            Button("Cancel", role: .cancel) { newPerson = "" }
-        } message: {
-            Text("Use their GitHub noreply email so the commit is credited to them.")
+            newPerson = ""
+        }
+        Button("Cancel", role: .cancel) { newPerson = "" }
+    } message: {
+        Text("Use their GitHub noreply email so the commit is credited to them.")
+    }
+    }
+}
+
+private extension CoAuthorMenu {
+    var coAuthorsLabel: String {
+        if !model.coAuthors.isEmpty { return "\(model.coAuthors.count)" }
+        return compact ? "" : "Co-authors"
+    }
+}
+
+private struct CoAuthorChips: View {
+    @Bindable var model: RepoModel
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(model.coAuthors) { person in
+                    HStack(spacing: 3) {
+                        Text(person.name).lineLimit(1)
+                        Button { model.coAuthors.removeAll { $0 == person } } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(.quaternary, in: Capsule())
+                    .help(person.trailer)
+                }
+            }
         }
     }
 }
