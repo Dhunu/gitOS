@@ -75,4 +75,4 @@ Account resolution for a repo: repo override → longest matching folder rule �
 
 Device flow needs a GitHub OAuth App client ID (one-time):
 github.com/settings/applications/new → any name, homepage/callback `http://localhost`
-→ tick **Enable Device Flow** → paste the Client ID into GitOS Settings › GitHub.
+→ tick **Enable Device Flow** → paste the Client ID into GitOS Settings › GitHub. The app ships with one built in (`AppState.builtInGitHubClientID`); Settings overrides it.

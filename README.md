@@ -9,14 +9,24 @@ See [SPEC.md](SPEC.md) for decisions and the roadmap.
 ```bash
 ./scripts/build-app.sh            # → build/GitOS.app
 ./scripts/build-app.sh --install  # also copies to /Applications
+./scripts/make-dmg.sh             # → build/GitOS-<version>.dmg to share
 ./scripts/make-icon.sh            # re-renders Resources/AppIcon.icns
 swift test                        # parser + real-git integration tests
 ```
 
+## Installing on another Mac
+
+Needs macOS 27 on Apple Silicon, plus git (Xcode Command Line Tools: `xcode-select --install`).
+
+1. Open the `.dmg` and drag GitOS to Applications.
+2. Open GitOS. macOS blocks it the first time because the build isn't notarized.
+3. In **System Settings › Privacy & Security**, click **Open Anyway** next to the GitOS message.
+
 ## First-time setup
 
-1. Create a GitHub OAuth App (one-time): github.com/settings/applications/new, with homepage and callback
-   `http://localhost` and **Enable Device Flow** ticked. Paste its Client ID into **Settings › GitHub**.
+1. Nothing to configure for GitHub sign-in: GitOS ships with a built-in OAuth Client ID. To use your own
+   OAuth App (homepage and callback `http://localhost`, **Enable Device Flow** ticked), paste its Client ID
+   into **Settings › GitHub**.
 2. **Settings › Accounts › +** for each GitHub account. Keep the browser signed into the account you're
    adding; use a private window for the second one.
 3. **Settings › Folder Rules**: e.g. `~/Work` → work account. Everything else uses the default account.

@@ -42,7 +42,9 @@ final class AppState {
     var rules: [FolderRule] = [] { didSet { save() } }
     var repos: [RepoRef] = [] { didSet { save() } }
     var defaultAccountID: UUID? { didSet { save() } }
-    var githubClientID = "" { didSet { save() } }
+    /// The shared GitOS OAuth app. A Client ID is public, and Settings › GitHub can replace it.
+    nonisolated static let builtInGitHubClientID = "Ov23liHw3HtFJTksW1a5"
+    var githubClientID = AppState.builtInGitHubClientID { didSet { save() } }
     var selectedRepoID: RepoRef.ID? { didSet { save() } }
     var preferences = Preferences() { didSet { save(); if oldValue != preferences { sync.preferencesChanged() } } }
     var summaries: [RepoRef.ID: RepoSummary] = [:]
@@ -226,6 +228,10 @@ final class AppState {
 
     // MARK: Persistence
 
+    nonisolated static func clientID(saved: String) -> String {
+        saved.trimmingCharacters(in: .whitespaces).isEmpty ? builtInGitHubClientID : saved
+    }
+
     private func load() {
         loading = true
         defer { loading = false }
@@ -235,7 +241,7 @@ final class AppState {
         rules = state.rules
         repos = state.repos
         defaultAccountID = state.defaultAccountID
-        githubClientID = state.githubClientID
+        githubClientID = Self.clientID(saved: state.githubClientID)
         selectedRepoID = state.selectedRepoID
         preferences = state.preferences ?? Preferences()
     }
