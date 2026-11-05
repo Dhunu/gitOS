@@ -151,6 +151,6 @@ enum Git {
     }
 }
 
-private final class DataBox: @unchecked Sendable {
+final class DataBox: @unchecked Sendable {
     var data = Data()
 }

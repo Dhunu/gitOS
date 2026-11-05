@@ -41,12 +41,15 @@ enum Claude {
         let error: Detail
     }
 
-    static func complete(system: String, prompt: String, model: String) async throws -> String {
-        guard let key = apiKey, !key.isEmpty else {
-            throw Failure(message: "Add your Anthropic API key in Settings › AI.")
-        }
+    static func complete(system: String, prompt: String, model: String, provider: AIProvider) async throws -> String {
         guard prompt.count <= maxInputCharacters else {
             throw Failure(message: "The diff is too large to send (\(prompt.count / 1000)K characters). Commit in smaller pieces.")
+        }
+        if provider != .apiKey {
+            return try await AICLI.complete(provider: provider, system: system, prompt: prompt, model: model)
+        }
+        guard let key = apiKey, !key.isEmpty else {
+            throw Failure(message: "Add your Anthropic API key in Settings › AI.")
         }
         // Server-side refusal fallback is available for Opus and Sonnet, not Haiku.
         let supportsFallback = !model.contains("haiku")
@@ -99,7 +102,7 @@ enum Claude {
 
     // MARK: Prompts
 
-    static func commitMessage(diff: String, recentSubjects: [String], model: String) async throws -> (String, String) {
+    static func commitMessage(diff: String, recentSubjects: [String], model: String, provider: AIProvider) async throws -> (String, String) {
         let system = """
         You write git commit messages for the staged changes you are given. Reply with the message only: \
         a summary line of at most 72 characters in the imperative mood, then a blank line and a short plain-text \
@@ -113,10 +116,10 @@ enum Claude {
         Staged diff:
         \(diff)
         """
-        return splitTitle(try await complete(system: system, prompt: prompt, model: model))
+        return splitTitle(try await complete(system: system, prompt: prompt, model: model, provider: provider))
     }
 
-    static func pullRequest(commits: [String], diff: String, base: String, model: String) async throws -> (String, String) {
+    static func pullRequest(commits: [String], diff: String, base: String, model: String, provider: AIProvider) async throws -> (String, String) {
         let system = """
         You write GitHub pull request titles and descriptions. Reply with the title on the first line \
         (plain text, under 70 characters), a blank line, then a Markdown description: a short summary of \
@@ -132,6 +135,6 @@ enum Claude {
         Diff:
         \(diff)
         """
-        return splitTitle(try await complete(system: system, prompt: prompt, model: model))
+        return splitTitle(try await complete(system: system, prompt: prompt, model: model, provider: provider))
     }
 }

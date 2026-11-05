@@ -16,6 +16,10 @@ struct GitOSApp: App {
         }
         .handlesExternalEvents(matching: [])
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { AppUpdater.shared.checkForUpdates() }
+                    .disabled(!AppUpdater.shared.isAvailable)
+            }
             CommandGroup(after: .newItem) {
                 Button("Add Local Repository…") { app.addRepositoryViaPanel() }
                     .keyboardShortcut("o")
@@ -54,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         if Bundle.main.bundleIdentifier != nil {
             UNUserNotificationCenter.current().delegate = self
         }
+        _ = AppUpdater.shared  // Starts the daily update check.
     }
 
     /// With the menu bar extra on, GitOS keeps running (and fetching) after its window closes.

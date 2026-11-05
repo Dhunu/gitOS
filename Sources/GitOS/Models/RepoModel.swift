@@ -212,7 +212,8 @@ final class RepoModel {
         do {
             let diff = try await repo.stagedPatch()
             let (title, body) = try await Claude.commitMessage(
-                diff: diff, recentSubjects: commits.map(\.subject), model: app.preferences.aiModel)
+                diff: diff, recentSubjects: commits.map(\.subject),
+                model: app.preferences.aiModel, provider: app.preferences.aiProvider)
             summary = title
             details = body
         } catch {

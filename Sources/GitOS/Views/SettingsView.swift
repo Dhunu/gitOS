@@ -16,6 +16,7 @@ struct SettingsView: View {
 // MARK: - General
 
 private struct GeneralSettings: View {
+    @State private var checksForUpdates = AppUpdater.shared.automaticallyChecksForUpdates
     @Environment(AppState.self) private var app
     @State private var cliPath = CLIInstaller.installedPath
     @State private var cliError: String?
@@ -35,6 +36,16 @@ private struct GeneralSettings: View {
                     }
                 Text("Each repository is fetched with its own account.")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Updates") {
+                Toggle("Check for updates automatically", isOn: $checksForUpdates)
+                    .disabled(!AppUpdater.shared.isAvailable)
+                    .onChange(of: checksForUpdates) { _, on in
+                        AppUpdater.shared.automaticallyChecksForUpdates = on
+                    }
+                Button("Check Now") { AppUpdater.shared.checkForUpdates() }
+                    .disabled(!AppUpdater.shared.isAvailable)
             }
 
             Section("Menu bar") {
@@ -429,50 +440,90 @@ private struct AISettings: View {
     @State private var key = ""
     @State private var hasKey = Claude.apiKey != nil
     @State private var saveError: String?
+    @State private var cliPath: String?
 
     var body: some View {
         @Bindable var app = app
         Form {
             Section {
-                if hasKey {
-                    LabeledContent("API key") {
-                        HStack {
-                            Text("Saved in Keychain").foregroundStyle(.secondary)
-                            Button("Remove", role: .destructive) {
-                                Keychain.delete(Claude.keychainKey)
-                                hasKey = false
-                            }
-                        }
-                    }
-                } else {
-                    SecureField("Anthropic API key", text: $key, prompt: Text("sk-ant-…"))
-                    Button("Save Key") {
-                        do {
-                            try Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), for: Claude.keychainKey)
-                            key = ""
-                            hasKey = true
-                            saveError = nil
-                        } catch {
-                            saveError = error.localizedDescription
-                        }
-                    }
-                    .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
-                    if let saveError { Text(saveError).foregroundStyle(Theme.removed).font(.caption) }
+                Picker("Use", selection: $app.preferences.aiProvider) {
+                    ForEach(AIProvider.allCases) { Text($0.name).tag($0) }
                 }
-                Picker("Model", selection: $app.preferences.aiModel) {
-                    ForEach(Claude.models, id: \.id) { Text($0.name).tag($0.id) }
+                if provider == .apiKey {
+                    apiKeyFields
+                } else {
+                    cliStatus
+                }
+                if provider != .codex {
+                    Picker("Model", selection: $app.preferences.aiModel) {
+                        ForEach(Claude.models, id: \.id) { Text($0.name).tag($0.id) }
+                    }
                 }
             } header: {
-                Text("Claude")
+                Text("AI")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Used for ✨ commit messages (⌘⇧G in the commit box) and pull request descriptions. Only the diff and commit messages you're writing about are sent.")
-                    Link("Get an API key", destination: URL(string: "https://platform.claude.com/settings/keys")!)
+                    if provider == .apiKey {
+                        Link("Get an API key", destination: URL(string: "https://platform.claude.com/settings/keys")!)
+                    } else {
+                        Text("\(provider.name) uses the account you're signed in to on this Mac, and requests count toward that plan's limits.")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
         }
+        .task(id: provider) {
+            let selected = provider
+            cliPath = nil
+            cliPath = await Task.detached { AICLI.executable(for: selected) ?? "" }.value
+        }
         .formStyle(.grouped)
+    }
+
+    private var provider: AIProvider { app.preferences.aiProvider }
+
+    @ViewBuilder private var cliStatus: some View {
+        LabeledContent("Command") {
+            if let cliPath, !cliPath.isEmpty {
+                Text(cliPath.abbreviatingWithTildeInPath).monospaced().textSelection(.enabled)
+            } else if cliPath != nil {
+                HStack {
+                    Text("Not installed").foregroundStyle(.secondary)
+                    if let url = provider.installURL { Link("Get \(provider.name)", destination: url) }
+                }
+            } else {
+                ProgressView().controlSize(.small)
+            }
+        }
+    }
+
+    @ViewBuilder private var apiKeyFields: some View {
+        if hasKey {
+            LabeledContent("API key") {
+                HStack {
+                    Text("Saved in Keychain").foregroundStyle(.secondary)
+                    Button("Remove", role: .destructive) {
+                        Keychain.delete(Claude.keychainKey)
+                        hasKey = false
+                    }
+                }
+            }
+        } else {
+            SecureField("Anthropic API key", text: $key, prompt: Text("sk-ant-…"))
+            Button("Save Key") {
+                do {
+                    try Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), for: Claude.keychainKey)
+                    key = ""
+                    hasKey = true
+                    saveError = nil
+                } catch {
+                    saveError = error.localizedDescription
+                }
+            }
+            .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
+            if let saveError { Text(saveError).foregroundStyle(Theme.removed).font(.caption) }
+        }
     }
 }

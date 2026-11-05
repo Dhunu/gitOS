@@ -8,6 +8,7 @@ struct Preferences: Codable, Equatable, Sendable {
     var notifyNewCommits = true
     var showMenuBarExtra = true
     var aiModel = Claude.defaultModel
+    var aiProvider = AIProvider.claudeCode
 
     init() {}
 
@@ -20,6 +21,7 @@ struct Preferences: Codable, Equatable, Sendable {
         notifyNewCommits = try c.decodeIfPresent(Bool.self, forKey: .notifyNewCommits) ?? d.notifyNewCommits
         showMenuBarExtra = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarExtra) ?? d.showMenuBarExtra
         aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel) ?? d.aiModel
+        aiProvider = try c.decodeIfPresent(AIProvider.self, forKey: .aiProvider) ?? d.aiProvider
     }
 }
 

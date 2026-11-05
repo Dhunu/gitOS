@@ -231,13 +231,13 @@ struct CommitBox: View {
                 if model.generatingMessage {
                     ProgressView().controlSize(.small)
                 } else {
-                    Button("Write with Claude", systemImage: "sparkles") {
+                    Button("Write with AI", systemImage: "sparkles") {
                         Task { await model.generateCommitMessage() }
                     }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
-                    .disabled(model.status.staged.isEmpty || Claude.apiKey == nil)
-                    .help(Claude.apiKey == nil ? "Add an Anthropic API key in Settings › AI" : "Write the message from the staged changes with Claude")
+                    .disabled(model.status.staged.isEmpty || !model.app.preferences.aiProvider.isReady)
+                    .help(!model.app.preferences.aiProvider.isReady ? "Add an Anthropic API key in Settings › AI" : "Write the message from the staged changes with Claude")
                     .keyboardShortcut("g", modifiers: [.command, .shift])
                 }
             }

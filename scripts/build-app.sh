@@ -3,6 +3,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# The release version. Sparkle compares this, so raise it for every release (scripts/release.sh does).
+VERSION="0.1.0"
+# Sparkle only installs updates signed with the matching private key, kept in the login Keychain
+# under the account "gitos" (back it up: generate_keys --account gitos -x <file>).
+SPARKLE_PUBLIC_KEY="vecXhaUoRcEc19rFlXLvb6hyeN3Q0PrwQy/k3GOZcRU="
+
 swift build -c release --product GitOS
 BIN="$(swift build -c release --show-bin-path)/GitOS"
 APP="build/GitOS.app"
@@ -27,8 +33,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>NSAccentColorName</key><string>AccentColor</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
+    <key>CFBundleVersion</key><string>$VERSION</string>
+    <key>SUFeedURL</key><string>https://github.com/Dhunu/gitOS/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>$SPARKLE_PUBLIC_KEY</string>
+    <key>SUEnableAutomaticChecks</key><true/>
     <key>LSMinimumSystemVersion</key><string>27.0</string>
     <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -44,6 +53,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+ditto "$(dirname "$BIN")/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/GitOS"
+codesign --force --deep --sign - "$APP/Contents/Frameworks/Sparkle.framework" >/dev/null
 codesign --force --sign - "$APP" >/dev/null
 echo "Built $APP"
 

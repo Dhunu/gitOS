@@ -242,9 +242,9 @@ struct CreatePullRequestSheet: View {
                 HStack {
                     Text("Description (Markdown)")
                     Spacer()
-                    Button("Write with Claude", systemImage: "sparkles") { Task { await generate() } }
-                        .disabled(Claude.apiKey == nil || working != nil || base.isEmpty)
-                        .help(Claude.apiKey == nil ? "Add an Anthropic API key in Settings › AI" : "Draft the title and description from this branch's commits and diff")
+                    Button("Write with AI", systemImage: "sparkles") { Task { await generate() } }
+                        .disabled(!model.app.preferences.aiProvider.isReady || working != nil || base.isEmpty)
+                        .help(!model.app.preferences.aiProvider.isReady ? "Add an Anthropic API key in Settings › AI" : "Draft the title and description from this branch's commits and diff")
                 }
             }
             if model.status.upstream == nil || model.status.ahead > 0 {
@@ -279,7 +279,9 @@ struct CreatePullRequestSheet: View {
         let commits = await model.commitsAhead(of: base)
         let diff = await model.diffAgainst(base: base)
         do {
-            let (t, b) = try await Claude.pullRequest(commits: commits, diff: diff, base: base, model: model.app.preferences.aiModel)
+            let (t, b) = try await Claude.pullRequest(commits: commits, diff: diff, base: base,
+                                                       model: model.app.preferences.aiModel,
+                                                       provider: model.app.preferences.aiProvider)
             title = t
             bodyText = b
             error = nil
