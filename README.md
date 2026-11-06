@@ -85,3 +85,11 @@ GitOS to Applications, choosing **Replace**.
 ./scripts/release.sh 0.2.0        # publishes a GitHub Release that installed apps update to
 swift test                        # parser + real-git integration tests
 ```
+
+## Contributing
+
+Contributions are welcome. See the [contributing guide](CONTRIBUTING.md) to get started, and [SECURITY.md](SECURITY.md) to report a security problem.
+
+## License
+
+GitOS is available under the [MIT License](LICENSE).

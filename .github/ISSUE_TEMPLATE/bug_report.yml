@@ -1,0 +1,40 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a repository
+        2. Click ...
+    validations:
+      required: true
+  - type: input
+    id: gitos-version
+    attributes:
+      label: GitOS version
+      description: Find it in GitOS › About GitOS.
+      placeholder: 0.1.4
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "27.2"
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or error messages
+      description: Please remove any tokens or private repository names first.
