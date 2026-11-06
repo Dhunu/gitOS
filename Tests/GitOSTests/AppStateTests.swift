@@ -63,11 +63,25 @@ struct AppStateTests {
 
     @Test func wrongAccountFailuresSuggestSwitching() {
         let missing = GitFailure(command: "fetch", message: "remote: Repository not found.\nfatal: repository 'https://github.com/a/b.git/' not found", exitCode: 128)
-        #expect(missing.accountHint(login: "Dhunu")?.contains("can't find this repository for @Dhunu") == true)
+        #expect(missing.accountHint(login: "Dhunu", owner: "Dhunu")?.contains("can't find this repository for @Dhunu") == true)
+        #expect(missing.accountHint(login: "dhunu", owner: "Dhunu")?.contains("organization") == false)
         let denied = GitFailure(command: "push", message: "remote: Permission to a/b.git denied to Dhunu.\nfatal: unable to access 'https://github.com/a/b.git/': The requested URL returned error: 403", exitCode: 128)
-        #expect(denied.accountHint(login: "Dhunu")?.contains("doesn't have permission") == true)
+        #expect(denied.accountHint(login: "Dhunu", owner: nil)?.contains("won't let @Dhunu") == true)
         let offline = GitFailure(command: "fetch", message: "fatal: unable to access: Could not resolve host: github.com", exitCode: 128)
-        #expect(offline.accountHint(login: "Dhunu") == nil)
+        #expect(offline.accountHint(login: "Dhunu", owner: nil) == nil)
+        #expect(!offline.isAccessDenied)
+    }
+
+    @Test func orgReposMentionApprovingGitOS() {
+        let missing = GitFailure(command: "fetch", message: "remote: Repository not found.", exitCode: 128)
+        let hint = missing.accountHint(login: "AngelSaikia", owner: "Bridgeness-Technologies")
+        #expect(hint?.contains("“Bridgeness-Technologies” organization may need to approve GitOS") == true)
+    }
+
+    @Test func tokenLinkTicksTheScopesGitOSNeeds() {
+        let url = GitHubDeviceFlow.classicTokenURL.absoluteString
+        #expect(url.hasPrefix("https://github.com/settings/tokens/new?"))
+        #expect(url.contains("scopes=repo,read:org,workflow,user:email"))
     }
 
     @Test func pagedListStopsAtAShortPage() async throws {

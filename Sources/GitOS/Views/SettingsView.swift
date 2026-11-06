@@ -251,14 +251,21 @@ struct SignInSheet: View {
 
     enum Phase {
         case intro
+        case token
         case requesting
         case waiting(GitHubDeviceFlow.DeviceCode)
         case finishing
         case failed(String)
     }
 
-    @State private var phase = Phase.intro
+    @State private var phase: Phase
     @State private var task: Task<Void, Never>?
+    @State private var token = ""
+
+    init(startWithToken: Bool = false, onSignedIn: @escaping (Account) -> Void) {
+        _phase = State(initialValue: startWithToken ? .token : .intro)
+        self.onSignedIn = onSignedIn
+    }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -276,6 +283,19 @@ struct SignInSheet: View {
                     Label("Set your OAuth app's Client ID in Settings › GitHub first.", systemImage: "exclamationmark.triangle")
                         .foregroundStyle(Theme.modified)
                 }
+            case .token:
+                Text("Use this if an organization hasn't approved GitOS. Tokens don't need its approval unless the organization blocks them.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Link("Create a Classic Token on GitHub", destination: GitHubDeviceFlow.classicTokenURL)
+                SecureField("Personal access token", text: $token, prompt: Text("ghp_…"))
+                    .textFieldStyle(.roundedBorder)
+                Text("Stored in your Keychain. If the organization uses SSO, also choose **Configure SSO** next to the token on GitHub.")
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             case .requesting, .finishing:
                 ProgressView()
             case .waiting(let code):
@@ -303,9 +323,15 @@ struct SignInSheet: View {
                 Spacer()
                 switch phase {
                 case .intro, .failed:
+                    Button("Use a Token…") { phase = .token }
                     Button("Sign in with Browser") { start() }
                         .keyboardShortcut(.defaultAction)
                         .disabled(app.githubClientID.isEmpty)
+                case .token:
+                    Button("Use Browser Instead") { phase = .intro }
+                    Button("Add Account") { signInWithToken() }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(trimmedToken.isEmpty)
                 default:
                     EmptyView()
                 }
@@ -314,6 +340,25 @@ struct SignInSheet: View {
         .padding(24)
         .frame(width: 440)
         .onDisappear { task?.cancel() }
+    }
+
+    private var trimmedToken: String { token.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private func signInWithToken() {
+        let grant = GitHubDeviceFlow.TokenGrant(accessToken: trimmedToken, refreshToken: nil, expiresAt: nil)
+        phase = .finishing
+        task = Task {
+            do {
+                let account = try await app.signIn(grant: grant)
+                token = ""
+                onSignedIn(account)
+                dismiss()
+            } catch is CancellationError {
+            } catch {
+                let rejected = (error as? GitHubError)?.statusCode == 401
+                phase = .failed(rejected ? "GitHub didn't accept that token. Check it and try again." : error.localizedDescription)
+            }
+        }
     }
 
     private func start() {

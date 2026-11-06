@@ -181,12 +181,17 @@ final class AppState {
     }
 
     /// The error's text, with advice when it looks like the repo needs a different account.
-    func message(for error: Error, repo: RepoRef) -> String {
+    func message(for error: Error, repo: RepoRef, owner: String?) -> String {
         if let login = resolveAccount(for: repo).account?.login,
-           let hint = (error as? GitFailure)?.accountHint(login: login) {
+           let hint = (error as? GitFailure)?.accountHint(login: login, owner: owner) {
             return hint
         }
         return error.localizedDescription
+    }
+
+    /// GitHub's page for this app, where organization access is requested.
+    var gitHubConnectionURL: URL? {
+        URL(string: "https://github.com/settings/connections/applications/\(Self.clientID(saved: githubClientID))")
     }
 
     func hasRejectedSignIn(for repo: RepoRef) -> Bool {

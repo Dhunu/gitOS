@@ -10,6 +10,16 @@ struct GitHubError: LocalizedError {
 enum GitHubDeviceFlow {
     static let scopes = "repo read:org workflow user:email"
 
+    /// GitHub's new-token page, with the scopes GitOS needs already ticked.
+    static var classicTokenURL: URL {
+        var components = URLComponents(string: "https://github.com/settings/tokens/new")!
+        components.queryItems = [
+            URLQueryItem(name: "description", value: "GitOS"),
+            URLQueryItem(name: "scopes", value: scopes.replacingOccurrences(of: " ", with: ",")),
+        ]
+        return components.url!
+    }
+
     struct DeviceCode: Decodable, Sendable {
         let deviceCode: String
         let userCode: String

@@ -35,6 +35,11 @@ xattr -dr com.apple.quarantine /Applications/GitOS.app
    into **Settings › GitHub**.
 2. **Settings › Accounts › +** for each GitHub account. Keep the browser signed into the account you're
    adding; use a private window for the second one.
+   If an organization hasn't approved GitOS, its private repositories show as "not found", even though your
+   account has access. You can ask the organization to approve GitOS, or click **Use a Token…** when adding the
+   account and paste a [classic personal access token](https://github.com/settings/tokens/new?description=GitOS&scopes=repo,read:org,workflow,user:email).
+   Tokens don't need organization approval unless the organization blocks them. If it uses SSO, also choose
+   **Configure SSO** next to the token on GitHub.
 3. **Settings › Folder Rules**: e.g. `~/Work` → work account. Everything else uses the default account.
    The account button in a repo's toolbar overrides it per repo.
 

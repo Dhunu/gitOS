@@ -57,17 +57,20 @@ final class BackgroundSync {
         let git = GitRepository(url: repo.url)
         let previous = app.summaries[repo.id]
         var summary = previous ?? RepoSummary()
+        var owner: String?
         // Retrying a refused token can't work and only piles up failed logins on GitHub.
         if fetched, !app.hasRejectedSignIn(for: repo) {
             do {
-                if try await !git.remotes().isEmpty {
+                let remotes = try await git.remotes()
+                owner = (remotes.first { $0.name == "origin" } ?? remotes.first)?.owner
+                if !remotes.isEmpty {
                     try await git.fetch(context: app.gitContext(for: repo))
                     summary.lastFetch = .now
                     summary.fetchError = nil
                 }
             } catch {
                 app.noteRejectedSignIn(error, for: repo)
-                summary.fetchError = app.message(for: error, repo: repo)
+                summary.fetchError = app.message(for: error, repo: repo, owner: owner)
             }
         }
         guard let status = try? await git.status() else { return }

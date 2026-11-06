@@ -6,6 +6,7 @@ struct RepoView: View {
     @State private var tab: Tab = .changes
     @State private var newBranchName = ""
     @State private var showingNewBranch = false
+    @State private var showingTokenSignIn = false
     @State private var watcher: RepoWatcher?
 
     enum Tab: String, CaseIterable {
@@ -103,8 +104,12 @@ struct RepoView: View {
                 .hidden()
         }
         .alert("Git error", isPresented: Binding(
-            get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } }
+            get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil; model.errorOffersOrgAccess = false } }
         )) {
+            if model.errorOffersOrgAccess, let url = model.app.gitHubConnectionURL {
+                Button("Use an Access Token…") { showingTokenSignIn = true }
+                Button("Review Access on GitHub") { NSWorkspace.shared.open(url) }
+            }
             Button("OK") {}
         } message: {
             Text(model.errorMessage ?? "")
@@ -119,6 +124,9 @@ struct RepoView: View {
         }
         .sheet(isPresented: $model.showingAddRemote) {
             AddRemoteSheet(model: model)
+        }
+        .sheet(isPresented: $showingTokenSignIn) {
+            SignInSheet(startWithToken: true) { _ in Task { await model.fetch() } }
         }
         .sheet(isPresented: $showingNewBranch) {
             NewBranchSheet(name: $newBranchName, base: model.status.branch) {

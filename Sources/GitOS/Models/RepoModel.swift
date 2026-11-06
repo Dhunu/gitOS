@@ -37,6 +37,8 @@ final class RepoModel {
     var prChecks: [Int: CheckSummary] = [:]
     var defaultBranch: String?
     var githubError: String?
+    /// The current error may be an organization that hasn't approved GitOS.
+    var errorOffersOrgAccess = false
     /// False when more open items exist than the app loads.
     var allPullRequestsLoaded = true
     var allIssuesLoaded = true
@@ -155,7 +157,9 @@ final class RepoModel {
         } catch {
             // A refused sign-in gets the Reconnect banner instead of git's raw error.
             if !app.noteRejectedSignIn(error, for: ref) {
-                errorMessage = app.message(for: error, repo: ref)
+                errorMessage = app.message(for: error, repo: ref, owner: primaryRemote?.owner)
+                let isOrgRepo = primaryRemote?.owner?.caseInsensitiveCompare(resolved.account?.login ?? "") != .orderedSame
+                errorOffersOrgAccess = (error as? GitFailure)?.isAccessDenied == true && isOrgRepo && primaryRemote?.isGitHub == true
             }
         }
         await refresh()

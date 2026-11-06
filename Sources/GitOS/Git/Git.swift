@@ -53,17 +53,24 @@ struct GitFailure: LocalizedError, Sendable {
         message.isEmpty ? "git \(command) failed with exit code \(exitCode)" : message
     }
 
-    /// What to try when GitHub turns `login` away. GitHub answers "not found" for private
-    /// repositories an account can't see, so that usually means the wrong account.
-    func accountHint(login: String) -> String? {
-        let switchAccount = "Switch account in the toolbar, or add a folder rule in Settings."
-        if message.contains("Repository not found") {
-            return "GitHub can't find this repository for @\(login). If it belongs to another account: \(switchAccount)"
+    /// GitHub turned the account away from this repository. It answers "not found" for private
+    /// repositories an app or account can't see, even when the account itself is a member.
+    var isAccessDenied: Bool {
+        message.contains("Repository not found") || message.contains("denied to")
+            || message.contains("The requested URL returned error: 403")
+    }
+
+    /// What to try when GitHub turns `login` away from a repository owned by `owner`.
+    func accountHint(login: String, owner: String?) -> String? {
+        guard isAccessDenied else { return nil }
+        let problem = message.contains("Repository not found")
+            ? "GitHub can't find this repository for @\(login)."
+            : "GitHub won't let @\(login) do this on this repository."
+        let switchAccount = "switch account in the toolbar or add a folder rule in Settings."
+        guard let owner, owner.caseInsensitiveCompare(login) != .orderedSame else {
+            return "\(problem) If it belongs to another account, \(switchAccount)"
         }
-        if message.contains("The requested URL returned error: 403") || message.contains("denied to") {
-            return "@\(login) doesn't have permission for this on GitHub. \(switchAccount)"
-        }
-        return nil
+        return "\(problem) If @\(login) has access, the “\(owner)” organization may need to approve GitOS, or you can add this account with an access token. Otherwise, \(switchAccount)"
     }
 
     /// GitHub refused the credentials, as opposed to a network or permissions problem.
