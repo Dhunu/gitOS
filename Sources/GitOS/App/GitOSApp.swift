@@ -10,15 +10,19 @@ struct GitOSApp: App {
         WindowGroup("GitOS", id: "main") {
             ContentView()
                 .environment(app)
-                .tint(Theme.accent)
+                .themedWindow()
                 .frame(minWidth: 960, minHeight: 600)
                 .task { app.sync.start() }
         }
         .handlesExternalEvents(matching: [])
         .commands {
             CommandGroup(after: .appInfo) {
-                Button("Check for Updates…") { AppUpdater.shared.checkForUpdates() }
-                    .disabled(!AppUpdater.shared.isAvailable)
+                if AppUpdater.shared.isReadyToInstall {
+                    Button("Restart to Update…") { AppUpdater.shared.installAndRestart() }
+                } else {
+                    Button("Check for Updates…") { AppUpdater.shared.checkForUpdates() }
+                        .disabled(!AppUpdater.shared.isAvailable)
+                }
             }
             CommandGroup(after: .newItem) {
                 Button("Add Local Repository…") { app.addRepositoryViaPanel() }
@@ -35,13 +39,13 @@ struct GitOSApp: App {
         Settings {
             SettingsView()
                 .environment(app)
-                .tint(Theme.accent)
+                .themedWindow()
         }
 
         MenuBarExtra(isInserted: $app.preferences.showMenuBarExtra) {
             MenuBarView()
                 .environment(app)
-                .tint(Theme.accent)
+                .themedWindow()
         } label: {
             Image(nsImage: GitOSMark.menuBarImage)
                 .accessibilityLabel("GitOS")
@@ -58,7 +62,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         if Bundle.main.bundleIdentifier != nil {
             UNUserNotificationCenter.current().delegate = self
         }
-        _ = AppUpdater.shared  // Starts the daily update check.
+        _ = AppUpdater.shared  // Checks for updates now, then every hour.
+    }
+
+    /// Quitting must not install a downloaded update, because only Restart to Update should.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        MainActor.assumeIsolated {
+            let updater = AppUpdater.shared
+            guard updater.hasPendingInstall else { return .terminateNow }
+            // A reason means logout, restart or shutdown, which an app shouldn't hold up.
+            let event = NSAppleEventManager.shared().currentAppleEvent
+            if event?.attributeDescriptor(forKeyword: kAEQuitReason) != nil {
+                updater.cancelPendingInstall()
+                return .terminateNow
+            }
+            updater.cancelPendingInstallThenQuit()
+            return .terminateCancel
+        }
     }
 
     /// With the menu bar extra on, GitOS keeps running (and fetching) after its window closes.

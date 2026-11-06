@@ -1,38 +1,39 @@
 import SwiftUI
 
-/// GitOS's palette, taken from the app icon: ink backgrounds, a teal accent and muted status colors.
-/// Every color adapts to light and dark mode.
+/// The active palette. Every color comes from here, and because this is observable, views
+/// recolor as soon as the theme changes, without losing their state.
 enum Theme {
-    static let accent = Color(light: 0x0F857B, dark: 0x2BA799)
-    static let head = Color(light: 0xB9791F, dark: 0xFFC978)
+    static var palette: ThemePalette { ThemeStore.shared.palette }
+
+    static var accent: Color { palette.accent.color }
+    static var head: Color { palette.head.color }
 
     // Surfaces
-    static let canvas = Color(light: 0xF7F8FA, dark: 0x14171F)
-    static let panel = Color(light: 0xEFF2F4, dark: 0x1A1E28)
-    static let field = Color(light: 0xFFFFFF, dark: 0x10131A)
+    static var canvas: Color { palette.canvas.color }
+    static var panel: Color { palette.panel.color }
+    static var field: Color { palette.field.color }
 
     // Status
-    static let added = Color(light: 0x2F8A5F, dark: 0x6CC79A)
-    static let modified = Color(light: 0xAD7419, dark: 0xE3B66B)
-    static let removed = Color(light: 0xBF4E5A, dark: 0xEA8F95)
-    static let renamed = Color(light: 0x4E69C9, dark: 0x93A8F2)
-    static let conflict = Color(light: 0x8256C4, dark: 0xB89AEE)
+    static var added: Color { palette.added.color }
+    static var modified: Color { palette.modified.color }
+    static var removed: Color { palette.removed.color }
+    static var renamed: Color { palette.renamed.color }
+    static var conflict: Color { palette.conflict.color }
 
     /// Commit graph lanes, and repository tiles.
-    static let lanes: [Color] = [
-        accent, renamed, modified, conflict, removed, added,
-        Color(light: 0x2F86B3, dark: 0x7CC0E6), Color(light: 0xA8634A, dark: 0xDDA188),
-    ]
+    static var lanes: [Color] {
+        [accent, renamed, modified, conflict, removed, added, palette.extraLane.color, palette.head.color]
+    }
 
     /// A stable color for a name. `hashValue` changes on every launch, so this sums the scalars.
     static func lane(for name: String) -> Color {
         lanes[name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) } % lanes.count]
     }
 
-    static let markGradient = LinearGradient(
-        colors: [Color(light: 0x13A08F, dark: 0x6FE9D3), Color(light: 0x5470DE, dark: 0x8FA4FF)],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
+    static var markGradient: LinearGradient {
+        LinearGradient(colors: [palette.gradientStart.color, palette.gradientEnd.color],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
 }
 
 extension Color {

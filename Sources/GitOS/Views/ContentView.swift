@@ -55,6 +55,8 @@ struct SidebarView: View {
                 }
             }
         }
+        .scrollContentBackground(Theme.palette.isCustom ? .hidden : .automatic)
+        .background(Theme.palette.isCustom ? Theme.panel : Color.clear)
         .overlay {
             if app.repos.isEmpty {
                 Text("No repositories yet").foregroundStyle(.secondary)
@@ -80,7 +82,12 @@ struct SidebarView: View {
             .padding(.horizontal, 14).padding(.vertical, 8)
         }
         .safeAreaInset(edge: .bottom) {
-            DefaultAccountFooter()
+            VStack(spacing: 8) {
+                if AppUpdater.shared.showsPrompt {
+                    UpdatePrompt(updater: AppUpdater.shared)
+                }
+                DefaultAccountFooter()
+            }
         }
     }
 

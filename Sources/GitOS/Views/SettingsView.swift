@@ -38,14 +38,21 @@ private struct GeneralSettings: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section("Appearance") {
+                ThemePicker(selection: $app.preferences.themeID)
+            }
+
             Section("Updates") {
                 Toggle("Check for updates automatically", isOn: $checksForUpdates)
                     .disabled(!AppUpdater.shared.isAvailable)
                     .onChange(of: checksForUpdates) { _, on in
                         AppUpdater.shared.automaticallyChecksForUpdates = on
                     }
+                Text("GitOS checks when it opens and every hour, and downloads updates in the background. They only install when you restart to update.")
+                    .font(.caption).foregroundStyle(.secondary)
+                UpdateStatusRow(updater: AppUpdater.shared)
                 Button("Check Now") { AppUpdater.shared.checkForUpdates() }
-                    .disabled(!AppUpdater.shared.isAvailable)
+                    .disabled(!AppUpdater.shared.isAvailable || AppUpdater.shared.isReadyToInstall)
             }
 
             Section("Menu bar") {

@@ -9,6 +9,7 @@ struct Preferences: Codable, Equatable, Sendable {
     var showMenuBarExtra = true
     var aiModel = Claude.defaultModel
     var aiProvider = AIProvider.claudeCode
+    var themeID = ThemePalette.gitOS.id
 
     init() {}
 
@@ -22,6 +23,7 @@ struct Preferences: Codable, Equatable, Sendable {
         showMenuBarExtra = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarExtra) ?? d.showMenuBarExtra
         aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel) ?? d.aiModel
         aiProvider = try c.decodeIfPresent(AIProvider.self, forKey: .aiProvider) ?? d.aiProvider
+        themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? d.themeID
     }
 }
 
@@ -50,7 +52,16 @@ final class AppState {
     nonisolated static let builtInGitHubClientID = "Ov23liHw3HtFJTksW1a5"
     var githubClientID = AppState.builtInGitHubClientID { didSet { save() } }
     var selectedRepoID: RepoRef.ID? { didSet { save() } }
-    var preferences = Preferences() { didSet { save(); if oldValue != preferences { sync.preferencesChanged() } } }
+    var preferences = Preferences() {
+        didSet {
+            save()
+            ThemeStore.shared.palette = .named(preferences.themeID)
+            // Changing the theme shouldn't restart background fetching.
+            var previous = oldValue
+            previous.themeID = preferences.themeID
+            if previous != preferences { sync.preferencesChanged() }
+        }
+    }
     var summaries: [RepoRef.ID: RepoSummary] = [:]
     var lastError: String?
     var showingClone = false
@@ -299,6 +310,7 @@ final class AppState {
         githubClientID = Self.clientID(saved: state.githubClientID)
         selectedRepoID = state.selectedRepoID
         preferences = state.preferences ?? Preferences()
+        ThemeStore.shared.palette = .named(preferences.themeID)
     }
 
     private func save() {

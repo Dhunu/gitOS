@@ -43,7 +43,8 @@ xattr -dr com.apple.quarantine /Applications/GitOS.app
 3. **Settings › Folder Rules**: e.g. `~/Work` → work account. Everything else uses the default account.
    The account button in a repo's toolbar overrides it per repo.
 
-Settings › General has background fetch, notifications, the menu bar icon, and
+Settings › General has themes (Monokai, Tokyo Night, Dracula, One Dark Pro, GitHub, Nord, Catppuccin, Solarized
+and more), background fetch, notifications, the menu bar icon, and
 **Install gitos Command** (then `gitos .` in any repo opens it in GitOS).
 
 ✨ commit messages (⌘⇧G) and PR descriptions use whichever you pick in **Settings › AI**: the
@@ -56,10 +57,12 @@ Tokens live in the macOS Keychain. Account switching is done with per-command `-
 
 ## Updating
 
-GitOS checks for new versions about once a day and offers to install them. To check yourself, choose
-**GitOS › Check for Updates…**, and you can turn the automatic check off in **Settings › General**.
-Your accounts and settings are kept. After an update, macOS may ask to let GitOS read its saved tokens
-from the Keychain: click **Always Allow**.
+GitOS checks for new versions when it opens and every hour while it's running, and downloads them in the
+background. When an update is ready, **Restart to Update** appears in the sidebar, the GitOS menu and
+**Settings › General**. Nothing installs until you click it: if you quit instead, the update downloads again
+next time. You can turn the automatic check off in **Settings › General**, or check yourself with
+**GitOS › Check for Updates…**. Your accounts and settings are kept. After an update, macOS may ask to let GitOS
+read its saved tokens from the Keychain: click **Always Allow**.
 
 You can also download the new `.dmg` from [Releases](https://github.com/Dhunu/gitOS/releases) and drag
 GitOS to Applications, choosing **Replace**.
