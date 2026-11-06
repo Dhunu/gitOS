@@ -324,9 +324,9 @@ struct SignInSheet: View {
                 let code = try await GitHubDeviceFlow.requestCode(clientID: clientID)
                 phase = .waiting(code)
                 open(code)
-                let token = try await GitHubDeviceFlow.pollForToken(clientID: clientID, code: code)
+                let grant = try await GitHubDeviceFlow.pollForToken(clientID: clientID, code: code)
                 phase = .finishing
-                let account = try await app.signIn(token: token)
+                let account = try await app.signIn(grant: grant)
                 onSignedIn(account)
                 dismiss()
             } catch is CancellationError {

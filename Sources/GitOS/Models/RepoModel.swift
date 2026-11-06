@@ -144,7 +144,10 @@ final class RepoModel {
         do {
             try await work()
         } catch {
-            errorMessage = error.localizedDescription
+            // A refused sign-in gets the Reconnect banner instead of git's raw error.
+            if !app.noteRejectedSignIn(error, for: ref) {
+                errorMessage = error.localizedDescription
+            }
         }
         await refresh()
     }

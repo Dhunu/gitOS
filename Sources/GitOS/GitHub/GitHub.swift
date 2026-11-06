@@ -22,14 +22,34 @@ enum GitHubDeviceFlow {
         }
     }
 
-    private struct TokenResponse: Decodable {
+    /// What GitHub issues at sign-in. Apps with token expiration on also get a refresh token.
+    struct TokenGrant: Sendable, Equatable {
+        let accessToken: String
+        let refreshToken: String?
+        let expiresAt: Date?
+    }
+
+    /// GitHub refused the refresh token, so only signing in again can help.
+    struct RefreshRefused: Error {}
+
+    struct TokenResponse: Decodable {
         let accessToken: String?
+        let refreshToken: String?
+        let expiresIn: Int?
         let error: String?
         let errorDescription: String?
         let interval: Int?
 
         enum CodingKeys: String, CodingKey {
-            case accessToken = "access_token", error, errorDescription = "error_description", interval
+            case accessToken = "access_token", refreshToken = "refresh_token", expiresIn = "expires_in"
+            case error, errorDescription = "error_description", interval
+        }
+
+        func grant(now: Date = .now) -> TokenGrant? {
+            accessToken.map { token in
+                TokenGrant(accessToken: token, refreshToken: refreshToken,
+                           expiresAt: expiresIn.map { now.addingTimeInterval(TimeInterval($0)) })
+            }
         }
     }
 
@@ -37,7 +57,7 @@ enum GitHubDeviceFlow {
         try await post("https://github.com/login/device/code", form: ["client_id": clientID, "scope": scopes])
     }
 
-    static func pollForToken(clientID: String, code: DeviceCode) async throws -> String {
+    static func pollForToken(clientID: String, code: DeviceCode) async throws -> TokenGrant {
         var interval = max(code.interval, 5)
         let deadline = Date().addingTimeInterval(TimeInterval(code.expiresIn))
         while Date() < deadline {
@@ -47,7 +67,7 @@ enum GitHubDeviceFlow {
                 "device_code": code.deviceCode,
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             ])
-            if let token = response.accessToken { return token }
+            if let grant = response.grant() { return grant }
             switch response.error {
             case "authorization_pending": continue
             case "slow_down": interval = response.interval ?? interval + 5
@@ -57,6 +77,17 @@ enum GitHubDeviceFlow {
             }
         }
         throw GitHubError(message: "The code expired. Start again.")
+    }
+
+    /// Device-flow tokens can be refreshed without a client secret, which a desktop app can't keep.
+    static func refresh(clientID: String, refreshToken: String) async throws -> TokenGrant {
+        let response: TokenResponse = try await post("https://github.com/login/oauth/access_token", form: [
+            "client_id": clientID,
+            "grant_type": "refresh_token",
+            "refresh_token": refreshToken,
+        ])
+        guard let grant = response.grant() else { throw RefreshRefused() }
+        return grant
     }
 
     private static func post<T: Decodable>(_ url: String, form: [String: String]) async throws -> T {

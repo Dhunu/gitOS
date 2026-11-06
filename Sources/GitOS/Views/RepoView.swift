@@ -28,6 +28,10 @@ struct RepoView: View {
         VStack(spacing: 0) {
             RepoTabBar(selection: $tab, count: count(for:))
             Divider()
+            if model.app.hasRejectedSignIn(for: model.ref), let account = model.resolved.account {
+                ReconnectBanner(account: account)
+                Divider()
+            }
             if model.isGitButlerWorkspace {
                 GitButlerBanner(model: model)
                 Divider()
@@ -578,5 +582,28 @@ private struct GitButlerBanner: View {
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
         .background(Theme.conflict.opacity(0.1))
+    }
+}
+
+/// Shown when GitHub refuses the token of the account this repository uses.
+private struct ReconnectBanner: View {
+    let account: Account
+    @State private var showingSignIn = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
+            Text("GitHub no longer accepts the sign-in for @\(account.login), so fetch, pull and push won't work.")
+                .lineLimit(2)
+            Spacer(minLength: 8)
+            Button("Reconnect…") { showingSignIn = true }
+                .help("Sign in again as @\(account.login). Your browser must be signed in to that account.")
+        }
+        .font(.callout)
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .background(Theme.panel)
+        .sheet(isPresented: $showingSignIn) {
+            SignInSheet { _ in }
+        }
     }
 }

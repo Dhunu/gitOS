@@ -16,6 +16,7 @@ final class BackgroundSync {
     func start() {
         guard loop == nil else { return }
         if app.preferences.notifyNewCommits { requestNotificationPermission() }
+        app.tokens.start()
         loop = Task { [weak self] in
             await self?.refreshSummaries()
             while !Task.isCancelled {
@@ -46,6 +47,7 @@ final class BackgroundSync {
         guard !isFetching else { return }
         isFetching = true
         defer { isFetching = false }
+        await app.tokens.refreshAll()
         for repo in app.repos {
             await updateSummary(for: repo, fetched: true)
         }
@@ -55,7 +57,8 @@ final class BackgroundSync {
         let git = GitRepository(url: repo.url)
         let previous = app.summaries[repo.id]
         var summary = previous ?? RepoSummary()
-        if fetched {
+        // Retrying a refused token can't work and only piles up failed logins on GitHub.
+        if fetched, !app.hasRejectedSignIn(for: repo) {
             do {
                 if try await !git.remotes().isEmpty {
                     try await git.fetch(context: app.gitContext(for: repo))
@@ -63,6 +66,7 @@ final class BackgroundSync {
                     summary.fetchError = nil
                 }
             } catch {
+                app.noteRejectedSignIn(error, for: repo)
                 summary.fetchError = error.localizedDescription
             }
         }

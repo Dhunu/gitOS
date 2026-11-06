@@ -52,6 +52,11 @@ struct GitFailure: LocalizedError, Sendable {
     var errorDescription: String? {
         message.isEmpty ? "git \(command) failed with exit code \(exitCode)" : message
     }
+
+    /// GitHub refused the credentials, as opposed to a network or permissions problem.
+    var isRejectedCredential: Bool {
+        message.contains("Invalid username or token") || message.contains("Authentication failed for")
+    }
 }
 
 enum Git {

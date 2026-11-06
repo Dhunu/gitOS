@@ -44,6 +44,8 @@ final class AppState {
     var rules: [FolderRule] = [] { didSet { save() } }
     var repos: [RepoRef] = [] { didSet { save() } }
     var defaultAccountID: UUID? { didSet { save() } }
+    /// Accounts whose token GitHub has refused. Signing in again clears them.
+    var rejectedAccountIDs: Set<UUID> = []
     /// The shared GitOS OAuth app. A Client ID is public, and Settings › GitHub can replace it.
     nonisolated static let builtInGitHubClientID = "Ov23liHw3HtFJTksW1a5"
     var githubClientID = AppState.builtInGitHubClientID { didSet { save() } }
@@ -53,6 +55,7 @@ final class AppState {
     var lastError: String?
     var showingClone = false
     @ObservationIgnored lazy var sync = BackgroundSync(app: self)
+    @ObservationIgnored lazy var tokens = TokenRefresher(app: self)
 
     private var loading = false
 
@@ -126,8 +129,8 @@ final class AppState {
     // MARK: Accounts
 
     /// Adds or refreshes an account from a freshly issued OAuth token.
-    func signIn(token: String) async throws -> Account {
-        let api = GitHubAPI(token: token)
+    func signIn(grant: GitHubDeviceFlow.TokenGrant) async throws -> Account {
+        let api = GitHubAPI(token: grant.accessToken)
         async let userRequest = api.user()
         async let emailsRequest = api.emails()
         let user = try await userRequest
@@ -149,18 +152,50 @@ final class AppState {
         account.knownEmails = Array(Set(verified + [account.noreplyEmail])).sorted()
         if account.commitEmail.isEmpty { account.commitEmail = primary ?? account.noreplyEmail }
 
-        try Keychain.set(token, for: account.id.uuidString)
+        account.tokenExpiresAt = grant.expiresAt
+        try store(grant, for: account)
         if let index = accounts.firstIndex(where: { $0.id == account.id }) {
             accounts[index] = account
         } else {
             accounts.append(account)
         }
         if defaultAccountID == nil { defaultAccountID = account.id }
+        if rejectedAccountIDs.remove(account.id) != nil {
+            Task { await sync.fetchAll() }
+        }
         return account
+    }
+
+    /// Saves the tokens for `account`. The refresh token is single-use, so each grant replaces it.
+    func store(_ grant: GitHubDeviceFlow.TokenGrant, for account: Account) throws {
+        try Keychain.set(grant.accessToken, for: account.id.uuidString)
+        if let refreshToken = grant.refreshToken {
+            try Keychain.set(refreshToken, for: account.refreshTokenKey)
+        } else {
+            Keychain.delete(account.refreshTokenKey)
+        }
+    }
+
+    func hasRejectedSignIn(for repo: RepoRef) -> Bool {
+        resolveAccount(for: repo).account.map { rejectedAccountIDs.contains($0.id) } ?? false
+    }
+
+    /// Records a refused token and returns true. Without a saved token the failure came from
+    /// the user's own git credentials, which GitOS can't fix by reconnecting.
+    @discardableResult
+    func noteRejectedSignIn(_ error: Error, for repo: RepoRef) -> Bool {
+        guard (error as? GitFailure)?.isRejectedCredential == true,
+              let account = resolveAccount(for: repo).account,
+              Keychain.get(account.id.uuidString) != nil else { return false }
+        rejectedAccountIDs.insert(account.id)
+        Task { await tokens.refresh(account, force: true) }
+        return true
     }
 
     func removeAccount(_ account: Account) {
         Keychain.delete(account.id.uuidString)
+        Keychain.delete(account.refreshTokenKey)
+        rejectedAccountIDs.remove(account.id)
         accounts.removeAll { $0.id == account.id }
         rules.removeAll { $0.accountID == account.id }
         for index in repos.indices where repos[index].accountOverride == account.id {

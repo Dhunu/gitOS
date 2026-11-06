@@ -24,7 +24,10 @@ struct Account: Codable, Identifiable, Hashable, Sendable {
     /// Verified emails on the GitHub account (incl. the noreply address); used for the push mismatch check.
     var knownEmails: [String] = []
     var signing: SigningConfig?
+    /// When the GitHub token runs out. Nil for tokens that don't expire.
+    var tokenExpiresAt: Date?
 
+    var refreshTokenKey: String { "\(id.uuidString).refresh" }
     var title: String { label.isEmpty ? "@\(login)" : "\(label) · @\(login)" }
     var noreplyEmail: String { "\(githubID)+\(login)@users.noreply.github.com" }
 
