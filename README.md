@@ -4,6 +4,8 @@ A native macOS git client (SwiftUI, macOS 27+) in the spirit of GitHub Desktop, 
 **multiple GitHub accounts that switch automatically per folder or repo**.
 See [SPEC.md](SPEC.md) for decisions and the roadmap.
 
+**Website:** [gitos.angelsaikia.com](https://gitos.angelsaikia.com)
+
 ## Download
 
 **[Download the latest GitOS `.dmg`](https://github.com/Dhunu/gitOS/releases/latest)** from the

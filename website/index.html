@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitOS: the git client for people with more than one GitHub account</title>
+<meta name="description" content="GitOS is a free, open source git client for macOS that switches GitHub accounts automatically by folder or repository.">
+<meta name="theme-color" content="#14171F">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GitOS: a git client that picks the right GitHub account">
+<meta property="og:description" content="A free, open source native macOS git client that switches GitHub accounts automatically by folder or repository.">
+<meta property="og:url" content="https://gitos.angelsaikia.com/">
+<meta property="og:image" content="https://gitos.angelsaikia.com/assets/themes/gitos.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://gitos.angelsaikia.com/">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-512.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <a class="brand" href="#top"><img src="assets/icon-512.png" alt="" width="30" height="30">GitOS</a>
+  <nav aria-label="Main">
+    <a href="#accounts">Accounts</a>
+    <a href="#features">Features</a>
+    <a href="#themes">Themes</a>
+    <a href="https://github.com/Dhunu/gitOS">GitHub</a>
+  </nav>
+  <a class="button small" href="https://github.com/Dhunu/gitOS/releases/latest">Download</a>
+</header>
+<main id="main">
+<section class="hero" id="top">
+  <p class="eyebrow">Free and open source for macOS</p>
+  <h1>Your commits, from the <span>right account</span>. Every time.</h1>
+  <p class="lead">GitOS is a native Mac git client that switches GitHub accounts for you, by folder or by repository. No more work commits from your personal email.</p>
+  <div class="actions">
+    <a class="button" href="https://github.com/Dhunu/gitOS/releases/latest">Download for Mac</a>
+    <a class="button ghost" href="https://github.com/Dhunu/gitOS">View on GitHub</a>
+  </div>
+  <p class="fine">Requires macOS 27 on Apple Silicon, and git.</p>
+  <figure class="shot"><img data-theme-shot src="assets/themes/gitos.png" width="1600" height="1018" alt="GitOS showing staged changes, a code diff and a commit message for a demo repository" fetchpriority="high"></figure>
+</section>
+
+<section class="split" id="accounts">
+  <div>
+    <p class="eyebrow">Built around multiple accounts</p>
+    <h2>Set it up once. Then forget about it.</h2>
+    <p>Tell GitOS which folders belong to which account. Every fetch, commit and push then uses the right sign-in and the right commit identity.</p>
+    <ul class="ticks">
+      <li>Folder rules, plus an override for any repository</li>
+      <li>A warning before you push commits from the wrong email</li>
+      <li>Your <code>~/.gitconfig</code> and existing logins are never changed</li>
+      <li>Tokens stay in your macOS Keychain</li>
+    </ul>
+  </div>
+  <div class="rules" role="img" aria-label="Folder rules: repositories in the Work folder use the maya-northwind account, and repositories in the Personal folder use the maya-makes account.">
+    <div class="rule"><code>~/Work</code><span class="arrow" aria-hidden="true">→</span><span class="who"><i>M</i>maya-northwind</span></div>
+    <div class="rule"><code>~/Personal</code><span class="arrow" aria-hidden="true">→</span><span class="who alt"><i>M</i>maya-makes</span></div>
+    <div class="rule dim"><code>everything else</code><span class="arrow" aria-hidden="true">→</span><span class="who alt"><i>M</i>default account</span></div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="head">
+    <p class="eyebrow">Everything you do in git</p>
+    <h2>A full client, not just a switcher.</h2>
+  </div>
+  <figure class="shot wide"><img src="assets/history.png" width="1600" height="1018" loading="lazy" alt="The GitOS history view with a commit graph showing a merged feature branch"></figure>
+  <div class="cards"><article class="card"><h3>Stage exactly what you mean</h3><p>Stage whole files, single hunks, or individual lines. Click the line numbers, and Shift-click for a range.</p></article><article class="card"><h3>Read your history</h3><p>A commit graph across one branch or all of them, with a searchable branch picker that includes remote branches.</p></article><article class="card"><h3>Rebase without fear</h3><p>Reorder, reword, squash and drop commits visually. GitOS warns you before rewriting anything already pushed.</p></article><article class="card"><h3>Resolve conflicts properly</h3><p>A 3-way editor with ours, base and theirs side by side, plus an editable result.</p></article><article class="card"><h3>Pull requests and issues</h3><p>Review open PRs and checks, check out a PR, open a new one, and manage issues without leaving the app.</p></article><article class="card"><h3>Stashes and worktrees</h3><p>Work on several branches at once, and stash or restore changes in a click.</p></article></div>
+</section>
+
+<section class="split reverse">
+  <div>
+    <p class="eyebrow">AI, on your terms</p>
+    <h2>Commit messages from the AI you already use.</h2>
+    <p>Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>G</kbd> and GitOS writes a message from your staged changes, matching your repository's style. It works with your signed-in Claude Code or Codex, with no API key needed, or with an Anthropic API key.</p>
+  </div>
+  <div>
+    <p class="eyebrow">Updates</p>
+    <h2>Updates that wait for you.</h2>
+    <p>GitOS downloads new versions in the background, then asks. Nothing installs until you click Restart to Update.</p>
+  </div>
+</section>
+
+<section id="themes">
+  <div class="head">
+    <p class="eyebrow">Make it yours</p>
+    <h2>Fifteen themes. Try them on this page.</h2>
+    <p>Pick one, and this site changes with it. These are the same colors the app uses.</p>
+  </div>
+  <div class="chips" role="group" aria-label="Choose a theme"><button type="button" class="chip" data-theme="gitos" aria-pressed="true"><span class="dots" aria-hidden="true"><i style="background:#14171F"></i><i style="background:#2BA799"></i><i style="background:#EA8F95"></i></span>GitOS</button><button type="button" class="chip" data-theme="dark-plus" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#1E1E1E"></i><i style="background:#3794FF"></i><i style="background:#F48771"></i></span>Dark+</button><button type="button" class="chip" data-theme="monokai" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#272822"></i><i style="background:#A6E22E"></i><i style="background:#F92672"></i></span>Monokai</button><button type="button" class="chip" data-theme="tokyo-night" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#1A1B26"></i><i style="background:#7AA2F7"></i><i style="background:#F7768E"></i></span>Tokyo Night</button><button type="button" class="chip" data-theme="dracula" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#282A36"></i><i style="background:#BD93F9"></i><i style="background:#FF5555"></i></span>Dracula</button><button type="button" class="chip" data-theme="one-dark-pro" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#282C34"></i><i style="background:#61AFEF"></i><i style="background:#E06C75"></i></span>One Dark Pro</button><button type="button" class="chip" data-theme="github-dark" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#0D1117"></i><i style="background:#58A6FF"></i><i style="background:#F85149"></i></span>GitHub Dark</button><button type="button" class="chip" data-theme="github-light" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#FFFFFF"></i><i style="background:#0969DA"></i><i style="background:#CF222E"></i></span>GitHub Light</button><button type="button" class="chip" data-theme="nord" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#2E3440"></i><i style="background:#88C0D0"></i><i style="background:#E5949C"></i></span>Nord</button><button type="button" class="chip" data-theme="catppuccin-mocha" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#1E1E2E"></i><i style="background:#CBA6F7"></i><i style="background:#F38BA8"></i></span>Catppuccin Mocha</button><button type="button" class="chip" data-theme="night-owl" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#011627"></i><i style="background:#82AAFF"></i><i style="background:#EF5350"></i></span>Night Owl</button><button type="button" class="chip" data-theme="gruvbox-dark" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#282828"></i><i style="background:#FE8019"></i><i style="background:#FB4934"></i></span>Gruvbox Dark</button><button type="button" class="chip" data-theme="rose-pine" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#191724"></i><i style="background:#C4A7E7"></i><i style="background:#EB6F92"></i></span>Rosé Pine</button><button type="button" class="chip" data-theme="solarized-dark" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#002B36"></i><i style="background:#2AA198"></i><i style="background:#E8554F"></i></span>Solarized Dark</button><button type="button" class="chip" data-theme="solarized-light" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#FDF6E3"></i><i style="background:#1B7A72"></i><i style="background:#C6281F"></i></span>Solarized Light</button></div>
+  <figure class="shot wide"><img data-theme-shot src="assets/themes/gitos.png" width="1600" height="1018" loading="lazy" alt="GitOS in the selected theme"></figure>
+</section>
+
+<section class="split" id="install">
+  <div>
+    <p class="eyebrow">Getting started</p>
+    <h2>Install in a minute.</h2>
+    <p>GitOS isn't notarized by Apple yet, so macOS asks you to approve it the first time.</p>
+    <a class="button" href="https://github.com/Dhunu/gitOS/releases/latest">Download for Mac</a>
+  </div>
+  <ol class="steps">
+    <li>Open the <code>.dmg</code> and drag GitOS to Applications.</li>
+    <li>Open GitOS. When macOS blocks it, click <b>Done</b>.</li>
+    <li>In <b>System Settings › Privacy &amp; Security</b>, click <b>Open Anyway</b>.</li>
+    <li>Add your GitHub accounts in <b>Settings › Accounts</b>.</li>
+  </ol>
+</section>
+
+<section class="oss">
+  <h2>Open source, MIT licensed.</h2>
+  <p>Read the code, report a bug, or send a pull request. Everyone's welcome.</p>
+  <div class="actions">
+    <a class="button ghost" href="https://github.com/Dhunu/gitOS">Source code</a>
+    <a class="button ghost" href="https://github.com/Dhunu/gitOS/blob/main/CONTRIBUTING.md">Contributing guide</a>
+  </div>
+</section>
+</main>
+<footer>
+  <span>GitOS is an independent project and isn't affiliated with GitHub.</span>
+  <nav aria-label="Footer">
+    <a href="https://github.com/Dhunu/gitOS/releases">Releases</a>
+    <a href="https://github.com/Dhunu/gitOS/blob/main/SECURITY.md">Security</a>
+    <a href="https://github.com/Dhunu/gitOS/blob/main/LICENSE">License</a>
+  </nav>
+</footer>
+<script>window.GITOS_THEMES=[{"id":"gitos","name":"GitOS","light":false,"accent":"#2BA799","head":"#FFC978","canvas":"#14171F","panel":"#1A1E28","field":"#10131A","added":"#6CC79A","modified":"#E3B66B","removed":"#EA8F95","renamed":"#93A8F2","conflict":"#B89AEE"},{"id":"dark-plus","name":"Dark+","light":false,"accent":"#3794FF","head":"#DCDCAA","canvas":"#1E1E1E","panel":"#252526","field":"#3C3C3C","added":"#81B88B","modified":"#E2C08D","removed":"#F48771","renamed":"#75BEFF","conflict":"#C586C0"},{"id":"monokai","name":"Monokai","light":false,"accent":"#A6E22E","head":"#FD971F","canvas":"#272822","panel":"#1E1F1C","field":"#35362E","added":"#A6E22E","modified":"#E6DB74","removed":"#F92672","renamed":"#66D9EF","conflict":"#AE81FF"},{"id":"tokyo-night","name":"Tokyo Night","light":false,"accent":"#7AA2F7","head":"#FF9E64","canvas":"#1A1B26","panel":"#16161E","field":"#14141B","added":"#9ECE6A","modified":"#E0AF68","removed":"#F7768E","renamed":"#7DCFFF","conflict":"#BB9AF7"},{"id":"dracula","name":"Dracula","light":false,"accent":"#BD93F9","head":"#FFB86C","canvas":"#282A36","panel":"#21222C","field":"#191A21","added":"#50FA7B","modified":"#F1FA8C","removed":"#FF5555","renamed":"#8BE9FD","conflict":"#FF79C6"},{"id":"one-dark-pro","name":"One Dark Pro","light":false,"accent":"#61AFEF","head":"#D19A66","canvas":"#282C34","panel":"#21252B","field":"#1D1F23","added":"#98C379","modified":"#E5C07B","removed":"#E06C75","renamed":"#56B6C2","conflict":"#C678DD"},{"id":"github-dark","name":"GitHub Dark","light":false,"accent":"#58A6FF","head":"#D29922","canvas":"#0D1117","panel":"#161B22","field":"#010409","added":"#3FB950","modified":"#D29922","removed":"#F85149","renamed":"#79C0FF","conflict":"#BC8CFF"},{"id":"github-light","name":"GitHub Light","light":true,"accent":"#0969DA","head":"#9A6700","canvas":"#FFFFFF","panel":"#F6F8FA","field":"#FFFFFF","added":"#1A7F37","modified":"#9A6700","removed":"#CF222E","renamed":"#0969DA","conflict":"#8250DF"},{"id":"nord","name":"Nord","light":false,"accent":"#88C0D0","head":"#D08770","canvas":"#2E3440","panel":"#272C36","field":"#3B4252","added":"#A3BE8C","modified":"#EBCB8B","removed":"#E5949C","renamed":"#81A1C1","conflict":"#B48EAD"},{"id":"catppuccin-mocha","name":"Catppuccin Mocha","light":false,"accent":"#CBA6F7","head":"#FAB387","canvas":"#1E1E2E","panel":"#181825","field":"#11111B","added":"#A6E3A1","modified":"#F9E2AF","removed":"#F38BA8","renamed":"#89B4FA","conflict":"#F5C2E7"},{"id":"night-owl","name":"Night Owl","light":false,"accent":"#82AAFF","head":"#F78C6C","canvas":"#011627","panel":"#01111D","field":"#0B253A","added":"#ADDB67","modified":"#ECC48D","removed":"#EF5350","renamed":"#7FDBCA","conflict":"#C792EA"},{"id":"gruvbox-dark","name":"Gruvbox Dark","light":false,"accent":"#FE8019","head":"#FABD2F","canvas":"#282828","panel":"#1D2021","field":"#3C3836","added":"#B8BB26","modified":"#FABD2F","removed":"#FB4934","renamed":"#83A598","conflict":"#D3869B"},{"id":"rose-pine","name":"Ros\u00e9 Pine","light":false,"accent":"#C4A7E7","head":"#F6C177","canvas":"#191724","panel":"#1F1D2E","field":"#26233A","added":"#9CCFD8","modified":"#F6C177","removed":"#EB6F92","renamed":"#7FB6C9","conflict":"#EBBCBA"},{"id":"solarized-dark","name":"Solarized Dark","light":false,"accent":"#2AA198","head":"#CB8A0C","canvas":"#002B36","panel":"#00212B","field":"#073642","added":"#93A516","modified":"#CB8A0C","removed":"#E8554F","renamed":"#4BA3E3","conflict":"#E0559A"},{"id":"solarized-light","name":"Solarized Light","light":true,"accent":"#1B7A72","head":"#8C6A00","canvas":"#FDF6E3","panel":"#EEE8D5","field":"#FFFBEF","added":"#657500","modified":"#8C6A00","removed":"#C6281F","renamed":"#1E6FB0","conflict":"#B42A6E"}];</script>
+<script src="site.js"></script>
+</body>
+</html>
