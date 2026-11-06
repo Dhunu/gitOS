@@ -10,6 +10,11 @@ final class RepoModel {
 
     var status = RepoStatus()
     var branches: [Branch] = []
+    var remoteBranches: [RemoteBranch] = []
+    /// How many commits History loads. Raised a page at a time, so huge repos stay quick.
+    var historyLimit = RepoModel.historyPage
+    static let historyPage = 500
+    var hasMoreHistory: Bool { commits.count >= historyLimit }
     var remotes: [RemoteInfo] = []
     var commits: [Commit] = [] { didSet { graph = CommitGraph.layout(commits) } }
     private(set) var graph: [GraphRow] = []
@@ -32,6 +37,9 @@ final class RepoModel {
     var prChecks: [Int: CheckSummary] = [:]
     var defaultBranch: String?
     var githubError: String?
+    /// False when more open items exist than the app loads.
+    var allPullRequestsLoaded = true
+    var allIssuesLoaded = true
     var githubLoadedAt: Date?
 
     var summary = ""
@@ -101,9 +109,10 @@ final class RepoModel {
             app.summaries[repoID] = summary
             async let branches = repo.branches()
             async let remotes = repo.remotes()
-            async let commits = status.isUnborn ? [] : repo.log(allBranches: showAllBranches)
+            async let commits = status.isUnborn ? [] : repo.log(limit: historyLimit, allBranches: showAllBranches)
             self.branches = try await branches
             self.remotes = (try? await remotes) ?? []
+            remoteBranches = (try? await repo.remoteBranches(remotes: self.remotes.map(\.name), excluding: self.branches)) ?? []
             operation = await repo.operationInProgress()
             stashes = (try? await repo.stashes()) ?? []
             worktrees = (try? await repo.worktrees()) ?? []
@@ -146,7 +155,7 @@ final class RepoModel {
         } catch {
             // A refused sign-in gets the Reconnect banner instead of git's raw error.
             if !app.noteRejectedSignIn(error, for: ref) {
-                errorMessage = error.localizedDescription
+                errorMessage = app.message(for: error, repo: ref)
             }
         }
         await refresh()
@@ -222,6 +231,15 @@ final class RepoModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func loadMoreHistory() async {
+        historyLimit += Self.historyPage
+        await refresh()
+    }
+
+    func checkOut(_ branch: RemoteBranch) async {
+        await perform("Switching to \(branch.name)") { try await repo.checkOut(branch) }
     }
 
     func switchBranch(_ name: String) async {

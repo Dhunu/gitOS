@@ -194,6 +194,8 @@ private struct NewWorktreeSheet: View {
                 Picker("Existing branch", selection: $branch) {
                     Text("Choose…").tag("")
                     ForEach(availableBranches) { Text($0.name).tag($0.name) }
+                    // Git creates a local tracking branch when the name is on one remote.
+                    ForEach(model.remoteBranches) { Text($0.ref).tag($0.name) }
                 }
             }
             HStack {

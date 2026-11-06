@@ -29,7 +29,13 @@ struct HistoryView: View {
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                     Spacer()
-                    Text("\(model.commits.count) commits").font(.caption).foregroundStyle(.secondary)
+                    Text("\(model.commits.count)\(model.hasMoreHistory ? "+" : "") commits")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if model.hasMoreHistory {
+                        Button("Load More") { Task { await model.loadMoreHistory() } }
+                            .buttonStyle(.borderless)
+                            .font(.caption)
+                    }
                 }
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Theme.panel)

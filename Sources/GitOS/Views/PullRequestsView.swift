@@ -20,6 +20,11 @@ struct PullRequestsView: View {
                         }
                 }
                 .safeAreaInset(edge: .top, spacing: 0) { toolbar }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if !model.allPullRequestsLoaded {
+                        ListLimitNotice(url: model.gitHubPage("pulls"))
+                    }
+                }
                 .overlay {
                     if model.pullRequests.isEmpty {
                         ContentUnavailableView("No Open Pull Requests", systemImage: "arrow.triangle.pull",
@@ -217,7 +222,8 @@ struct CreatePullRequestSheet: View {
     @State private var error: String?
 
     private var bases: [String] {
-        var names = model.branches.map(\.name).filter { $0 != model.status.branch }
+        let remote = model.remoteBranches.filter { $0.remote == model.primaryRemote?.name }
+        var names = (model.branches.map(\.name) + remote.map(\.name)).filter { $0 != model.status.branch }
         if let main = model.defaultBranch {
             names.removeAll { $0 == main }
             names.insert(main, at: 0)

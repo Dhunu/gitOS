@@ -95,6 +95,17 @@ struct GitRepository: Sendable {
         }
     }
 
+    /// Fetched remote branches that aren't checked out locally. Uses what the last fetch saw.
+    func remoteBranches(remotes: [String], excluding local: [Branch]) async throws -> [RemoteBranch] {
+        let output = try await Git.run(["for-each-ref", "--format=%(refname:lstrip=2)%1f%(symref)", "refs/remotes"], in: url)
+        return RemoteBranchParser.parse(output, remotes: remotes, excluding: local)
+    }
+
+    /// Creates a local branch that tracks `branch`, then switches to it.
+    func checkOut(_ branch: RemoteBranch) async throws {
+        try await Git.run(["switch", "--track", branch.ref], in: url)
+    }
+
     func switchBranch(_ name: String) async throws {
         try await Git.run(["switch", name], in: url)
     }

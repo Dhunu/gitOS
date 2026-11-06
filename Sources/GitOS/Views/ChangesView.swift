@@ -366,6 +366,7 @@ struct CommitBox: View {
 
     private var commitTitle: String {
         let count = model.status.staged.count
+        if count == 0 { return model.status.hasChanges ? "Stage changes to commit" : "Nothing to commit" }
         let files = count == 1 ? "1 file" : "\(count) files"
         return "Commit \(files) to \(model.status.branch ?? "HEAD")"
     }

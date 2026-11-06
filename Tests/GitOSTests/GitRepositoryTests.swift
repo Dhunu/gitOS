@@ -81,6 +81,65 @@ struct GitRepositoryTests {
         #expect(!status.hasChanges)
     }
 
+    @Test func checkingOutARemoteOnlyBranchTracksItLocally() async throws {
+        try write("a.txt", "a\n")
+        try await repo.stage(["a.txt"])
+        try await repo.commit(message: "A", context: identity)
+        try await repo.createBranch("newdesign")
+        try await repo.switchBranch("main")
+
+        let remoteDir = repo.url.deletingLastPathComponent()
+            .appendingPathComponent("remote-\(UUID().uuidString).git").path
+        defer { try? FileManager.default.removeItem(atPath: remoteDir) }
+        try await Git.run(["clone", "-q", "--bare", repo.url.path, remoteDir], in: repo.url.deletingLastPathComponent())
+        try await Git.run(["remote", "add", "origin", remoteDir], in: repo.url)
+        try await Git.run(["fetch", "-q", "origin"], in: repo.url)
+        try await Git.run(["branch", "-D", "newdesign"], in: repo.url)
+
+        let local = try await repo.branches()
+        let remote = try await repo.remoteBranches(remotes: ["origin"], excluding: local)
+        #expect(remote.map(\.ref) == ["origin/newdesign"])
+
+        try await repo.checkOut(remote[0])
+        let after = try await repo.branches()
+        #expect(after.first { $0.isCurrent }?.name == "newdesign")
+        #expect(after.first { $0.isCurrent }?.upstream == "origin/newdesign")
+        #expect(try await repo.remoteBranches(remotes: ["origin"], excluding: after).isEmpty)
+    }
+
+    @Test func worktreeFromARemoteOnlyBranchTracksIt() async throws {
+        try write("a.txt", "a\n")
+        try await repo.stage(["a.txt"])
+        try await repo.commit(message: "A", context: identity)
+        try await repo.createBranch("newdesign")
+        try await repo.switchBranch("main")
+
+        let parent = repo.url.deletingLastPathComponent()
+        let remoteDir = parent.appendingPathComponent("remote-\(UUID().uuidString).git").path
+        let treeDir = parent.appendingPathComponent("tree-\(UUID().uuidString)").path
+        defer {
+            try? FileManager.default.removeItem(atPath: remoteDir)
+            try? FileManager.default.removeItem(atPath: treeDir)
+        }
+        try await Git.run(["clone", "-q", "--bare", repo.url.path, remoteDir], in: parent)
+        try await Git.run(["remote", "add", "origin", remoteDir], in: repo.url)
+        try await Git.run(["fetch", "-q", "origin"], in: repo.url)
+        try await Git.run(["branch", "-D", "newdesign"], in: repo.url)
+
+        try await repo.addWorktree(path: treeDir, branch: "newdesign", newBranch: false)
+        #expect(try await repo.branches().first { $0.name == "newdesign" }?.upstream == "origin/newdesign")
+    }
+
+    @Test func historyLoadsUpToTheLimitAsked() async throws {
+        for name in ["a", "b", "c"] {
+            try write("\(name).txt", name)
+            try await repo.stage(["\(name).txt"])
+            try await repo.commit(message: name, context: identity)
+        }
+        #expect(try await repo.log(limit: 2).count == 2)
+        #expect(try await repo.log(limit: 5).count == 3)
+    }
+
     @Test func branchesAndUnpushedEmails() async throws {
         try write("a.txt", "a\n")
         try await repo.stage(["a.txt"])

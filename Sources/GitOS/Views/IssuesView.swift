@@ -53,6 +53,11 @@ struct IssuesView: View {
                     .padding(8)
                     .background(Theme.panel)
                 }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if !model.allIssuesLoaded {
+                        ListLimitNotice(url: model.gitHubPage("issues"))
+                    }
+                }
                 .overlay {
                     if model.issues.isEmpty {
                         ContentUnavailableView("No Open Issues", systemImage: "checkmark.circle",
@@ -152,5 +157,22 @@ private struct NewIssueSheet: View {
                 .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || working)
             }
         }
+    }
+}
+
+/// Says a GitHub list was cut off, rather than letting it look complete.
+struct ListLimitNotice: View {
+    let url: URL?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("Showing the \(PagedList<Int>.maxItems) most recently updated.")
+            if let url { Link("See all on GitHub", destination: url) }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(Theme.panel)
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 
 struct GitHubError: LocalizedError {
     let message: String
+    var statusCode: Int?
     var errorDescription: String? { message }
 }
 
@@ -177,7 +178,8 @@ struct GitHubAPI: Sendable {
             let detail = (try? JSONDecoder().decode(APIErrorBody.self, from: data)).map { error in
                 ([error.message] + (error.errors ?? []).map(\.message)).compactMap { $0 }.joined(separator: ": ")
             }
-            throw GitHubError(message: detail?.nilIfEmpty ?? "GitHub API \(path) returned \(http.statusCode).")
+            throw GitHubError(message: detail?.nilIfEmpty ?? "GitHub API \(path) returned \(http.statusCode).",
+                              statusCode: http.statusCode)
         }
         return try GitHubAPI.decoder.decode(T.self, from: data)
     }

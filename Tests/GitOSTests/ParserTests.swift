@@ -145,4 +145,27 @@ struct WorktreeParserTests {
         #expect(trees[0].isMain && trees[0].branch == "main")
         #expect(!trees[1].isMain && trees[1].branch == nil && trees[1].isLocked)
     }
+
+    @Test func remoteBranchesSkipHEADAndBranchesAlreadyLocal() {
+        let output = """
+        origin/HEAD\u{1f}refs/remotes/origin/main
+        origin/main\u{1f}
+        origin/newdesign\u{1f}
+        origin/feat/billing\u{1f}
+        my/fork/topic\u{1f}
+        unknown/thing\u{1f}
+        """
+        let local = [Branch(name: "main", upstream: "origin/main", isCurrent: true)]
+        let branches = RemoteBranchParser.parse(output, remotes: ["origin", "my", "my/fork"], excluding: local)
+        #expect(branches.map(\.ref) == ["origin/newdesign", "origin/feat/billing", "my/fork/topic"])
+        #expect(branches[1].name == "feat/billing")
+        #expect(branches[2].remote == "my/fork")
+    }
+
+    @Test func branchSearchIgnoresCaseAndMatchesEveryWord() {
+        #expect(BranchChoice.matches("feat/mac-download", query: ""))
+        #expect(BranchChoice.matches("newdesign", query: "NewDes"))
+        #expect(BranchChoice.matches("feat/mac-download", query: "mac feat"))
+        #expect(!BranchChoice.matches("feat/mac-download", query: "mac windows"))
+    }
 }

@@ -77,9 +77,11 @@ struct GitHubRepoAPI: Sendable {
 
     func info() async throws -> RepoInfo { try await api.send("GET", base, body: Optional<[String: String]>.none) }
 
-    func pullRequests() async throws -> [PullRequest] {
-        try await api.send("GET", base + "/pulls?state=open&per_page=50&sort=updated&direction=desc",
-                           body: Optional<[String: String]>.none)
+    func pullRequests() async throws -> PagedList<PullRequest> {
+        try await PagedList.load { page in
+            try await api.send("GET", base + "/pulls?state=open&per_page=\(PagedList<PullRequest>.pageSize)&page=\(page)&sort=updated&direction=desc",
+                               body: Optional<[String: String]>.none)
+        }
     }
 
     func createPullRequest(title: String, body: String, head: String, base baseBranch: String, draft: Bool) async throws -> PullRequest {
@@ -88,10 +90,13 @@ struct GitHubRepoAPI: Sendable {
                                   body: Payload(title: title, body: body, head: head, base: baseBranch, draft: draft))
     }
 
-    func issues() async throws -> [Issue] {
-        let all: [Issue] = try await api.send("GET", base + "/issues?state=open&per_page=50&sort=updated",
-                                              body: Optional<[String: String]>.none)
-        return all.filter { $0.pullRequest == nil }
+    func issues() async throws -> PagedList<Issue> {
+        let all: PagedList<Issue> = try await .load { page in
+            try await api.send("GET", base + "/issues?state=open&per_page=\(PagedList<Issue>.pageSize)&page=\(page)&sort=updated",
+                               body: Optional<[String: String]>.none)
+        }
+        // GitHub counts pull requests as issues.
+        return PagedList(items: all.items.filter { $0.pullRequest == nil }, isComplete: all.isComplete)
     }
 
     func createIssue(title: String, body: String) async throws -> Issue {
@@ -174,5 +179,25 @@ struct CheckSummary: Hashable, Sendable {
         let pending = items.filter { $0.state == .pending }.count
         return [failed > 0 ? "\(failed) failing" : nil, pending > 0 ? "\(pending) pending" : nil,
                 passed > 0 ? "\(passed) passed" : nil].compactMap { $0 }.joined(separator: ", ")
+    }
+}
+
+/// A GitHub list read a page at a time, up to a cap that keeps huge repositories quick.
+struct PagedList<Item: Sendable>: Sendable {
+    static var pageSize: Int { 100 }
+    static var maxPages: Int { 5 }
+    static var maxItems: Int { pageSize * maxPages }
+
+    var items: [Item]
+    var isComplete: Bool
+
+    static func load(_ fetch: @Sendable (Int) async throws -> [Item]) async throws -> PagedList {
+        var items: [Item] = []
+        for page in 1...maxPages {
+            let batch = try await fetch(page)
+            items += batch
+            if batch.count < pageSize { return PagedList(items: items, isComplete: true) }
+        }
+        return PagedList(items: items, isComplete: false)
     }
 }

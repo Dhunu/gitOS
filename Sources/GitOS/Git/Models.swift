@@ -152,6 +152,14 @@ struct Branch: Identifiable, Hashable, Sendable {
     var id: String { name }
 }
 
+/// A branch on a remote that has no local branch yet.
+struct RemoteBranch: Identifiable, Hashable, Sendable {
+    var remote: String
+    var name: String
+    var ref: String { "\(remote)/\(name)" }
+    var id: String { ref }
+}
+
 struct RemoteInfo: Hashable, Sendable {
     var name: String
     var url: String

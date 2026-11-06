@@ -55,6 +55,35 @@ struct AppStateTests {
         #expect(account.tokenExpiresAt == nil)
     }
 
+    @Test func rejectedAPICallsCountAsARejectedSignIn() {
+        #expect(AppState.isRejectedSignIn(GitHubError(message: "Bad credentials", statusCode: 401)))
+        #expect(!AppState.isRejectedSignIn(GitHubError(message: "Forbidden", statusCode: 403)))
+        #expect(!AppState.isRejectedSignIn(GitHubError(message: "No status")))
+    }
+
+    @Test func wrongAccountFailuresSuggestSwitching() {
+        let missing = GitFailure(command: "fetch", message: "remote: Repository not found.\nfatal: repository 'https://github.com/a/b.git/' not found", exitCode: 128)
+        #expect(missing.accountHint(login: "Dhunu")?.contains("can't find this repository for @Dhunu") == true)
+        let denied = GitFailure(command: "push", message: "remote: Permission to a/b.git denied to Dhunu.\nfatal: unable to access 'https://github.com/a/b.git/': The requested URL returned error: 403", exitCode: 128)
+        #expect(denied.accountHint(login: "Dhunu")?.contains("doesn't have permission") == true)
+        let offline = GitFailure(command: "fetch", message: "fatal: unable to access: Could not resolve host: github.com", exitCode: 128)
+        #expect(offline.accountHint(login: "Dhunu") == nil)
+    }
+
+    @Test func pagedListStopsAtAShortPage() async throws {
+        let list = try await PagedList<Int>.load { page in
+            page == 1 ? Array(repeating: 0, count: 100) : [1, 2]
+        }
+        #expect(list.items.count == 102)
+        #expect(list.isComplete)
+    }
+
+    @Test func pagedListAdmitsWhenItHitsTheCap() async throws {
+        let list = try await PagedList<Int>.load { _ in Array(repeating: 0, count: 100) }
+        #expect(list.items.count == PagedList<Int>.maxItems)
+        #expect(!list.isComplete)
+    }
+
     @Test func savedClientIDWins() {
         #expect(AppState.clientID(saved: "Ov23custom") == "Ov23custom")
     }

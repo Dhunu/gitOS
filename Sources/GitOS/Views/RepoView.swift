@@ -64,7 +64,7 @@ struct RepoView: View {
         .navigationSubtitle(model.status.branch ?? "detached HEAD")
         .toolbar {
             ToolbarItem { AccountMenu(model: model) }
-            ToolbarItem { branchMenu }
+            ToolbarItem { BranchPicker(model: model) { showingNewBranch = true } }
             ToolbarItem {
                 if let checks = model.headChecks, checks.state != .none {
                     Menu {
@@ -138,38 +138,6 @@ struct RepoView: View {
         case .issues: model.issues.count
         case .history: 0
         }
-    }
-
-    private var branchMenu: some View {
-        Menu {
-            Section("Switch to") {
-                ForEach(model.branches) { branch in
-                    Button {
-                        Task { await model.switchBranch(branch.name) }
-                    } label: {
-                        if branch.isCurrent {
-                            Label(branch.name, systemImage: "checkmark")
-                        } else {
-                            Text(branch.name)
-                        }
-                    }
-                    .disabled(branch.isCurrent)
-                }
-            }
-            Menu("Merge into \(model.status.branch ?? "HEAD")") {
-                ForEach(model.branches.filter { !$0.isCurrent }) { branch in
-                    Button(branch.name) { Task { await model.merge(branch.name) } }
-                }
-            }
-            .disabled(model.status.hasChanges || model.status.branch == nil)
-            Divider()
-            Button("New Branch…") { showingNewBranch = true }
-                .keyboardShortcut("n", modifiers: [.command, .shift])
-        } label: {
-            Label(model.status.branch ?? "detached", systemImage: "arrow.triangle.branch")
-                .labelStyle(.titleAndIcon)
-        }
-        .help("Current branch")
     }
 
     private var syncButton: some View {

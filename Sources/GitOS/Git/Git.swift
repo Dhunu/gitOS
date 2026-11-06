@@ -53,6 +53,19 @@ struct GitFailure: LocalizedError, Sendable {
         message.isEmpty ? "git \(command) failed with exit code \(exitCode)" : message
     }
 
+    /// What to try when GitHub turns `login` away. GitHub answers "not found" for private
+    /// repositories an account can't see, so that usually means the wrong account.
+    func accountHint(login: String) -> String? {
+        let switchAccount = "Switch account in the toolbar, or add a folder rule in Settings."
+        if message.contains("Repository not found") {
+            return "GitHub can't find this repository for @\(login). If it belongs to another account: \(switchAccount)"
+        }
+        if message.contains("The requested URL returned error: 403") || message.contains("denied to") {
+            return "@\(login) doesn't have permission for this on GitHub. \(switchAccount)"
+        }
+        return nil
+    }
+
     /// GitHub refused the credentials, as opposed to a network or permissions problem.
     var isRejectedCredential: Bool {
         message.contains("Invalid username or token") || message.contains("Authentication failed for")

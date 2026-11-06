@@ -24,12 +24,16 @@ extension RepoModel {
             async let prs = github.pullRequests()
             async let issues = github.issues()
             async let info = github.info()
-            self.pullRequests = try await prs
-            self.issues = try await issues
+            let (loadedPRs, loadedIssues) = try await (prs, issues)
+            pullRequests = loadedPRs.items
+            allPullRequestsLoaded = loadedPRs.isComplete
+            self.issues = loadedIssues.items
+            allIssuesLoaded = loadedIssues.isComplete
             self.defaultBranch = (try? await info)?.defaultBranch
             githubError = nil
         } catch {
-            githubError = error.localizedDescription
+            // A refused sign-in gets the Reconnect banner instead of "Bad credentials".
+            githubError = app.noteRejectedSignIn(error, for: ref) ? nil : error.localizedDescription
         }
         await loadChecks()
     }
@@ -51,6 +55,12 @@ extension RepoModel {
             }
         }
         prChecks = results
+    }
+
+    /// A page of this repository on github.com, such as `pulls`.
+    func gitHubPage(_ path: String) -> URL? {
+        guard let remote = primaryRemote, remote.isGitHub, let owner = remote.owner, let name = remote.repo else { return nil }
+        return URL(string: "https://github.com/\(owner)/\(name)/\(path)")
     }
 
     /// The open PR whose head is the current branch, if any.

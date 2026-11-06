@@ -176,6 +176,19 @@ final class AppState {
         }
     }
 
+    nonisolated static func isRejectedSignIn(_ error: Error) -> Bool {
+        (error as? GitFailure)?.isRejectedCredential == true || (error as? GitHubError)?.statusCode == 401
+    }
+
+    /// The error's text, with advice when it looks like the repo needs a different account.
+    func message(for error: Error, repo: RepoRef) -> String {
+        if let login = resolveAccount(for: repo).account?.login,
+           let hint = (error as? GitFailure)?.accountHint(login: login) {
+            return hint
+        }
+        return error.localizedDescription
+    }
+
     func hasRejectedSignIn(for repo: RepoRef) -> Bool {
         resolveAccount(for: repo).account.map { rejectedAccountIDs.contains($0.id) } ?? false
     }
@@ -184,7 +197,7 @@ final class AppState {
     /// the user's own git credentials, which GitOS can't fix by reconnecting.
     @discardableResult
     func noteRejectedSignIn(_ error: Error, for repo: RepoRef) -> Bool {
-        guard (error as? GitFailure)?.isRejectedCredential == true,
+        guard Self.isRejectedSignIn(error),
               let account = resolveAccount(for: repo).account,
               Keychain.get(account.id.uuidString) != nil else { return false }
         rejectedAccountIDs.insert(account.id)

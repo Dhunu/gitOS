@@ -259,3 +259,20 @@ enum WorktreeParser {
         }
     }
 }
+
+enum RemoteBranchParser {
+    /// Takes `refname:lstrip=2` and `symref` fields. Symbolic refs such as `origin/HEAD` are skipped,
+    /// and so are branches already available locally under the same name.
+    static func parse(_ output: String, remotes: [String], excluding local: [Branch]) -> [RemoteBranch] {
+        let localNames = Set(local.map(\.name))
+        // Longest first, so a remote named `a/b` isn't read as remote `a`.
+        let remotes = remotes.sorted { $0.count > $1.count }
+        return output.split(separator: "\n").compactMap { line in
+            let fields = line.components(separatedBy: "\u{1f}")
+            guard fields.count == 2, fields[1].isEmpty,
+                  let remote = remotes.first(where: { fields[0].hasPrefix("\($0)/") }) else { return nil }
+            let name = String(fields[0].dropFirst(remote.count + 1))
+            return localNames.contains(name) ? nil : RemoteBranch(remote: remote, name: name)
+        }
+    }
+}

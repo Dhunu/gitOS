@@ -67,7 +67,7 @@ final class BackgroundSync {
                 }
             } catch {
                 app.noteRejectedSignIn(error, for: repo)
-                summary.fetchError = error.localizedDescription
+                summary.fetchError = app.message(for: error, repo: repo)
             }
         }
         guard let status = try? await git.status() else { return }
