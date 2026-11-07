@@ -76,8 +76,14 @@ struct HistoryView: View {
                         }
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                        Text("\(model.commitDiffs.count) changed file\(model.commitDiffs.count == 1 ? "" : "s")")
-                            .font(.caption).foregroundStyle(.secondary)
+                        HStack {
+                            Text("\(model.commitDiffs.count) changed file\(model.commitDiffs.count == 1 ? "" : "s")")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            ReviewButton(model: model, target: .commit(commit.sha), title: "Review Commit")
+                                .controlSize(.small)
+                        }
+                        ReviewPanel(model: model, target: .commit(commit.sha))
                     }
                     .padding(14)
 

@@ -119,6 +119,19 @@ struct GitHubRepoAPI: Sendable {
         try await api.send("GET", base + "/pulls/\(number)/files?per_page=100", body: Optional<[String: String]>.none)
     }
 
+    /// A file's text at `ref` via the contents API. Nil for binaries, missing files,
+    /// and anything over GitHub's ~1 MB contents limit.
+    func fileContent(path: String, ref: String) async throws -> String? {
+        struct Contents: Decodable { let content: String?; let encoding: String? }
+        let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path
+        let escapedRef = ref.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ref
+        let found: Contents? = try? await api.send("GET", base + "/contents/\(escapedPath)?ref=\(escapedRef)",
+                                                   body: Optional<[String: String]>.none)
+        guard let found, found.encoding == "base64", let base64 = found.content,
+              let data = Data(base64Encoded: base64, options: .ignoreUnknownCharacters) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
     func closePullRequest(_ number: Int) async throws {
         struct Closed: Decodable { let state: String }
         let _: Closed = try await api.send("PATCH", base + "/pulls/\(number)", body: ["state": "closed"])

@@ -98,7 +98,9 @@ struct PullRequestsView: View {
                             .disabled(model.isBusy || model.status.hasChanges)
                             .help(model.status.hasChanges ? "Commit or stash your changes first" : "Switch to this pull request's branch")
                         Button("Open on GitHub", systemImage: "safari") { NSWorkspace.shared.open(pr.htmlURL) }
+                        ReviewButton(model: model, target: .pullRequest(pr.number))
                     }
+                    ReviewPanel(model: model, target: .pullRequest(pr.number), pullRequestNumber: pr.number)
                     if let checks = model.prChecks[pr.number], !checks.items.isEmpty {
                         ChecksList(checks: checks)
                     }
