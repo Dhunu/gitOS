@@ -17,6 +17,7 @@ struct ChangesView: View {
 
             diffPane
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                .safeAreaInset(edge: .bottom, spacing: 0) { reviewInset }
         }
         .onChange(of: model.currentDiff) { lineSelection = [] }
         .confirmationDialog(
@@ -74,9 +75,36 @@ struct ChangesView: View {
         }
     }
 
+    /// Shows the inline AI review of the pending changes under the diff, once one ran.
+    @ViewBuilder
+    private var reviewInset: some View {
+        if model.reviewState.reviews[.workingTree] != nil || model.reviewState.errors[.workingTree] != nil {
+            ScrollView {
+                ReviewPanel(model: model, target: .workingTree) { finding in
+                    let all = model.status.conflicted + model.status.unstaged + model.status.staged
+                    if let change = all.first(where: { $0.path == finding.file }) {
+                        model.selectedChangeID = change.id
+                    }
+                }
+                .padding(10)
+            }
+            .frame(maxHeight: 280)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(Theme.panel.opacity(0.6))
+        }
+    }
+
     private func row(_ change: FileChange) -> some View {
-        FileChangeRow(change: change) {
-            Task { await model.toggleStage(change) }
+        HStack(spacing: 4) {
+            FileChangeRow(change: change) {
+                Task { await model.toggleStage(change) }
+            }
+            if let severity = model.workingTreeFindingSeverity(for: change.path) {
+                Circle()
+                    .fill(severity == .blocker ? Theme.removed : Theme.modified)
+                    .frame(width: 7, height: 7)
+                    .help("The AI review flagged this file")
+            }
         }
         .tag(change.id)
         .contextMenu {
@@ -298,10 +326,35 @@ struct CommitBox: View {
     private func footerRow(compact: Bool) -> some View {
         HStack(spacing: 12) {
             aiButton(compact: compact)
+            reviewButton(compact: compact)
             CoAuthorMenu(model: model, compact: compact)
             Spacer(minLength: 8)
             commitIdentity(compact: compact)
         }
+    }
+
+    /// Reviews what the commit would contain; findings appear under the diff.
+    private func reviewButton(compact: Bool) -> some View {
+        let provider = model.app.preferences.aiProvider
+        let running = model.reviewState.running.contains(.workingTree)
+        return Button {
+            Task { await model.runReview(.workingTree) }
+        } label: {
+            if running {
+                HStack(spacing: 5) {
+                    ProgressView().controlSize(.mini)
+                    Text("Reviewing…")
+                }
+            } else {
+                Label(compact ? "Review" : "Review Changes", systemImage: "text.badge.checkmark")
+            }
+        }
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .disabled(running || !model.status.hasChanges || !provider.isReady)
+        .help(!provider.isReady ? "Add an Anthropic API key in Settings › AI"
+              : !model.status.hasChanges ? "No local changes to review"
+              : "Review the staged changes (or everything, when nothing is staged) before committing. Advisory only.")
     }
 
     private func aiButton(compact: Bool) -> some View {

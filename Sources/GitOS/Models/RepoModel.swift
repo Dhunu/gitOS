@@ -44,6 +44,7 @@ final class RepoModel {
     var allIssuesLoaded = true
     var githubLoadedAt: Date?
     var triage = TriageState()
+    var reviewState = ReviewState()
 
     var summary = ""
     var details = ""

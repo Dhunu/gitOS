@@ -126,6 +126,9 @@ private struct TriageRow: View {
                 HStack(spacing: 5) {
                     Text(pr.title).lineLimit(2)
                     if let score { ScorePill(score: score) }
+                    if let review = model.reviewState.reviews[.pullRequest(pr.number)] {
+                        ReviewVerdictChip(review: review)
+                    }
                 }
                 HStack(spacing: 4) {
                     Text("#\(pr.number)")
@@ -146,11 +149,22 @@ private struct TriageRow: View {
                     Text(verdict)
                         .font(.caption).italic().foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                } else if model.reviewState.running.contains(.pullRequest(pr.number)) {
+                    HStack(spacing: 5) {
+                        ProgressView().controlSize(.mini)
+                        Text("Reviewing…").font(.caption).foregroundStyle(.secondary)
+                    }
                 } else {
-                    Button("Pre-review with AI") { Task { await model.preReview(pr) } }
-                        .font(.caption).buttonStyle(.link)
-                        .disabled(!model.app.preferences.aiProvider.isReady)
-                        .help("Your signed-in AI checks whether the diff matches the description. A hint, not a decision.")
+                    HStack(spacing: 10) {
+                        Button("Pre-review with AI") { Task { await model.preReview(pr) } }
+                            .help("Your signed-in AI checks whether the diff matches the description. A hint, not a decision.")
+                        if model.reviewState.reviews[.pullRequest(pr.number)] == nil {
+                            Button("Full review") { Task { await model.runReview(.pullRequest(pr.number)) } }
+                                .help("A full code review with findings — select the PR to read it")
+                        }
+                    }
+                    .font(.caption).buttonStyle(.link)
+                    .disabled(!model.app.preferences.aiProvider.isReady)
                 }
             }
             Spacer()
