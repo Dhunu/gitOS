@@ -41,13 +41,24 @@ struct GitHubRepoAPI: Sendable {
         let createdAt: Date
         let updatedAt: Date
         let labels: [Label]
+        /// OWNER, MEMBER, COLLABORATOR, CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER or NONE.
+        let authorAssociation: String?
 
         var id: Int { number }
 
         enum CodingKeys: String, CodingKey {
             case number, title, body, user, head, base, draft, labels
             case htmlURL = "html_url", createdAt = "created_at", updatedAt = "updated_at"
+            case authorAssociation = "author_association"
         }
+    }
+
+    /// One changed file in a pull request, with its unified-diff patch when GitHub provides one.
+    struct PRFile: Decodable, Hashable, Sendable {
+        let filename: String
+        let additions: Int
+        let deletions: Int
+        let patch: String?
     }
 
     struct Issue: Decodable, Identifiable, Hashable, Sendable {
@@ -101,6 +112,21 @@ struct GitHubRepoAPI: Sendable {
 
     func createIssue(title: String, body: String) async throws -> Issue {
         try await api.send("POST", base + "/issues", body: ["title": title, "body": body])
+    }
+
+    /// The first 100 changed files of a pull request (plenty for triage comparisons).
+    func files(for number: Int) async throws -> [PRFile] {
+        try await api.send("GET", base + "/pulls/\(number)/files?per_page=100", body: Optional<[String: String]>.none)
+    }
+
+    func closePullRequest(_ number: Int) async throws {
+        struct Closed: Decodable { let state: String }
+        let _: Closed = try await api.send("PATCH", base + "/pulls/\(number)", body: ["state": "closed"])
+    }
+
+    func comment(on number: Int, body: String) async throws {
+        struct Posted: Decodable { let id: Int }
+        let _: Posted = try await api.send("POST", base + "/issues/\(number)/comments", body: ["body": body])
     }
 
     // MARK: Checks

@@ -43,6 +43,7 @@ final class RepoModel {
     var allPullRequestsLoaded = true
     var allIssuesLoaded = true
     var githubLoadedAt: Date?
+    var triage = TriageState()
 
     var summary = ""
     var details = ""
