@@ -3,129 +3,153 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GitOS: the git client for people with more than one GitHub account</title>
-<meta name="description" content="GitOS is a free, open source git client for macOS that switches GitHub accounts automatically by folder or repository.">
-<meta name="theme-color" content="#14171F">
+<title>GitOS, the Mac git client for more than one GitHub account</title>
+<meta name="description" content="GitOS is a free, open source Mac git client that picks the right GitHub account for each folder or repo.">
+<meta name="theme-color" content="#1A1E28">
+<link rel="canonical" href="https://gitos.angelsaikia.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="GitOS: a git client that picks the right GitHub account">
-<meta property="og:description" content="A free, open source native macOS git client that switches GitHub accounts automatically by folder or repository.">
+<meta property="og:title" content="GitOS">
+<meta property="og:description" content="A free, open source Mac git client that picks the right GitHub account for each folder or repo.">
 <meta property="og:url" content="https://gitos.angelsaikia.com/">
 <meta property="og:image" content="https://gitos.angelsaikia.com/assets/themes/gitos.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="canonical" href="https://gitos.angelsaikia.com/">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/icon-512.png">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<header class="nav">
-  <a class="brand" href="#top"><img src="assets/icon-512.png" alt="" width="30" height="30">GitOS</a>
-  <nav aria-label="Main">
-    <a href="#accounts">Accounts</a>
-    <a href="#features">Features</a>
-    <a href="#themes">Themes</a>
-    <a href="https://github.com/Dhunu/gitOS">GitHub</a>
-  </nav>
-  <a class="button small" href="https://github.com/Dhunu/gitOS/releases/latest">Download</a>
+<header class="toolbar">
+  <div class="toolbar-in">
+    <a class="brand" href="#top"><svg class="mark" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke-width="9" stroke-linecap="round"><path class="track-idle" d="M27 50C44 50 44 13.5 68 13.5M27 50C44 50 44 86.5 68 86.5"/><path class="track" d="M13 50H75"/></g><circle class="track-idle-dot" cx="68" cy="13.5" r="8.2"/><circle class="track-idle-dot" cx="68" cy="86.5" r="8.2"/><circle class="track-dot" cx="13" cy="50" r="9.2"/><circle class="head-dot" cx="75.5" cy="50" r="19.5"/><circle class="head-cut" cx="75.5" cy="44.2" r="6.2"/><path class="head-cut" d="M63.8 63.5a11.7 9.4 0 0 1 23.4 0a19 19 0 0 1-23.4 0z"/></svg><span>GitOS</span></a>
+    <nav class="tabs" aria-label="Main"><a href="#accounts" data-nav="accounts">Accounts</a><a href="#features" data-nav="features">Features</a><a href="#themes" data-nav="themes">Themes</a><a href="#releases" data-nav="releases">Releases</a><a href="#install" data-nav="install">Install</a></nav>
+    <div class="tools">
+      <a class="pill" href="https://github.com/Dhunu/gitOS">GitHub</a>
+      <a class="pill prominent" href="https://github.com/Dhunu/gitOS/releases/latest"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.6v6.2M5.4 8.4 8 11l2.6-2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Download</a>
+    </div>
+  </div>
 </header>
+
 <main id="main">
 <section class="hero" id="top">
-  <p class="eyebrow">Free and open source for macOS</p>
-  <h1>Your commits, from the <span>right account</span>. Every time.</h1>
-  <p class="lead">GitOS is a native Mac git client that switches GitHub accounts for you, by folder or by repository. No more work commits from your personal email.</p>
-  <div class="actions">
-    <a class="button" href="https://github.com/Dhunu/gitOS/releases/latest">Download for Mac</a>
-    <a class="button ghost" href="https://github.com/Dhunu/gitOS">View on GitHub</a>
+  <div class="hero-copy">
+    <h1>The Mac git client that picks the right GitHub account.</h1>
+    <p class="lead">Work repos use your work account, personal repos use yours. GitOS switches by folder or repo, so you stop pushing as the wrong person.</p>
+    <div class="composer">
+      <p class="summary">GitOS 0.1.4</p>
+      <p class="details">Free and open source. Needs macOS 27 on Apple Silicon, and git. 4.4 MB.</p>
+      <div class="composer-foot"><a href="https://github.com/Dhunu/gitOS/releases">All releases</a><a href="#install">How to install</a></div>
+    </div>
+    <a class="commit-button" href="https://github.com/Dhunu/gitOS/releases/latest">Download for Mac</a>
   </div>
-  <p class="fine">Requires macOS 27 on Apple Silicon, and git.</p>
-  <figure class="shot"><img data-theme-shot src="assets/themes/gitos.png" width="1600" height="1018" alt="GitOS showing staged changes, a code diff and a commit message for a demo repository" fetchpriority="high"></figure>
+  <figure class="shot"><img data-theme-shot src="assets/themes/gitos.png" width="1600" height="1018" alt="The GitOS app showing staged files, a code diff and a commit message" fetchpriority="high"></figure>
 </section>
 
-<section class="split" id="accounts">
-  <div>
-    <p class="eyebrow">Built around multiple accounts</p>
-    <h2>Set it up once. Then forget about it.</h2>
-    <p>Tell GitOS which folders belong to which account. Every fetch, commit and push then uses the right sign-in and the right commit identity.</p>
-    <ul class="ticks">
-      <li>Folder rules, plus an override for any repository</li>
-      <li>A warning before you push commits from the wrong email</li>
-      <li>Your <code>~/.gitconfig</code> and existing logins are never changed</li>
-      <li>Tokens stay in your macOS Keychain</li>
-    </ul>
+<section id="accounts" class="band">
+  <div class="heading">
+    <h2>One Mac, more than one GitHub account</h2>
+    <p>Tell GitOS which folder belongs to which account. Each fetch, commit and push then uses that account's sign-in and commit email. Your <code>~/.gitconfig</code> stays as it is.</p>
   </div>
-  <div class="rules" role="img" aria-label="Folder rules: repositories in the Work folder use the maya-northwind account, and repositories in the Personal folder use the maya-makes account.">
-    <div class="rule"><code>~/Work</code><span class="arrow" aria-hidden="true">→</span><span class="who"><i>M</i>maya-northwind</span></div>
-    <div class="rule"><code>~/Personal</code><span class="arrow" aria-hidden="true">→</span><span class="who alt"><i>M</i>maya-makes</span></div>
-    <div class="rule dim"><code>everything else</code><span class="arrow" aria-hidden="true">→</span><span class="who alt"><i>M</i>default account</span></div>
+  <div class="split">
+    <div class="surface accounts-demo">
+      <p class="section-label" id="repos-label">Repositories</p>
+      <ul class="repos" aria-labelledby="repos-label"><li><button type="button" class="repo" data-repo="northwind-web" data-account="work" aria-pressed="true"><span class="tile" data-lane="2" aria-hidden="true">N</span><span class="repo-text"><span class="repo-name">northwind-web</span><span class="repo-path">~/Work</span></span><span class="avatar" data-avatar aria-hidden="true">M</span></button></li><li><button type="button" class="repo" data-repo="northwind-api" data-account="work" aria-pressed="false"><span class="tile" data-lane="5" aria-hidden="true">N</span><span class="repo-text"><span class="repo-name">northwind-api</span><span class="repo-path">~/Work</span></span><span class="avatar" data-avatar aria-hidden="true">M</span></button></li><li><button type="button" class="repo" data-repo="pixel-journal" data-account="personal" aria-pressed="false"><span class="tile" data-lane="1" aria-hidden="true">P</span><span class="repo-text"><span class="repo-name">pixel-journal</span><span class="repo-path">~/Personal</span></span><span class="avatar" data-avatar aria-hidden="true">M</span></button></li><li><button type="button" class="repo" data-repo="dotfiles" data-account="personal" aria-pressed="false"><span class="tile" data-lane="3" aria-hidden="true">D</span><span class="repo-text"><span class="repo-name">dotfiles</span><span class="repo-path">~/Personal</span></span><span class="avatar" data-avatar aria-hidden="true">M</span></button></li></ul>
+    </div>
+    <div class="surface identity-card" aria-live="polite">
+      <div class="identity-row"><span>Repository</span><strong data-repo-name>northwind-web</strong></div>
+      <div class="identity-row"><span>Folder rule</span><code data-rule>~/Work</code></div>
+      <div class="identity-row"><span>Account</span><strong data-account-name>maya-northwind</strong></div>
+      <div class="identity-row"><span>Commit email</span><strong data-identity>maya@northwind.example</strong></div>
+      <p class="identity-hint">Pick a repo to see it switch. These accounts are made up.</p>
+      <button type="button" class="btn" data-push-warning>Push as the wrong account</button>
+    </div>
   </div>
+  <ul class="facts">
+    <li>Override the rule for any repo from the toolbar.</li>
+    <li>Tokens go in the macOS Keychain, separate from the logins you already have.</li>
+    <li>If unpushed commits use an email that isn't on the account, GitOS asks first.</li>
+  </ul>
 </section>
 
 <section id="features">
-  <div class="head">
-    <p class="eyebrow">Everything you do in git</p>
-    <h2>A full client, not just a switcher.</h2>
+  <div class="heading">
+    <h2>Everything else you'd expect from a git client</h2>
+    <p>It's native SwiftUI, and it covers the work you do every day.</p>
   </div>
-  <figure class="shot wide"><img src="assets/history.png" width="1600" height="1018" loading="lazy" alt="The GitOS history view with a commit graph showing a merged feature branch"></figure>
-  <div class="cards"><article class="card"><h3>Stage exactly what you mean</h3><p>Stage whole files, single hunks, or individual lines. Click the line numbers, and Shift-click for a range.</p></article><article class="card"><h3>Read your history</h3><p>A commit graph across one branch or all of them, with a searchable branch picker that includes remote branches.</p></article><article class="card"><h3>Rebase without fear</h3><p>Reorder, reword, squash and drop commits visually. GitOS warns you before rewriting anything already pushed.</p></article><article class="card"><h3>Resolve conflicts properly</h3><p>A 3-way editor with ours, base and theirs side by side, plus an editable result.</p></article><article class="card"><h3>Pull requests and issues</h3><p>Review open PRs and checks, check out a PR, open a new one, and manage issues without leaving the app.</p></article><article class="card"><h3>Stashes and worktrees</h3><p>Work on several branches at once, and stash or restore changes in a click.</p></article></div>
+  <div class="surface feature-browser">
+    <ul class="feature-list"><li><button type="button" class="row feature" data-feature="d-staging"><span class="row-title">Stage only what you mean</span><span class="row-sub">Whole files, single hunks, or individual lines.</span></button></li><li><button type="button" class="row feature" data-feature="d-history"><span class="row-title">Read your history</span><span class="row-sub">A commit graph for one branch or all of them.</span></button></li><li><button type="button" class="row feature" data-feature="d-rebase"><span class="row-title">Rebase without a text editor</span><span class="row-sub">Reorder, reword, squash, fixup and drop.</span></button></li><li><button type="button" class="row feature" data-feature="d-conflicts"><span class="row-title">Resolve conflicts in 3 ways</span><span class="row-sub">Ours, base and theirs, with an editable result.</span></button></li><li><button type="button" class="row feature" data-feature="d-github"><span class="row-title">Pull requests and issues</span><span class="row-sub">See checks, check out a PR, open a new one.</span></button></li><li><button type="button" class="row feature" data-feature="d-more"><span class="row-title">Stashes and worktrees</span><span class="row-sub">Park your work, or check out two branches at once.</span></button></li></ul>
+    <div class="feature-pane"><article class="feature-detail" id="d-staging"><header class="diff-head"><h3>Stage only what you mean</h3></header><div class="code" data-stageable><div class="hunk"><span>@@ -1,3 +1,4 @@ click a line number to pick that line</span></div><div class="ln del"><span class="no no-old" aria-hidden="true">1</span><span class="no no-new" aria-hidden="true"></span><span class="sign" aria-hidden="true">-</span><span class="tx"><span class="sr">removed: </span>export function total(items: Item[]) {</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">1</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>export function total(items: Item[], discount = 0) {</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">2</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>&nbsp;&nbsp;console.log("debug", items) // you don't want to commit this</span></div><div class="ln ctx"><span class="no no-old" aria-hidden="true">2</span><span class="no no-new" aria-hidden="true">3</span><span class="sign" aria-hidden="true"> </span><span class="tx">&nbsp;&nbsp;return sum(items) - discount</span></div><div class="ln ctx"><span class="no no-old" aria-hidden="true">3</span><span class="no no-new" aria-hidden="true">4</span><span class="sign" aria-hidden="true"> </span><span class="tx">}</span></div></div></article><article class="feature-detail" id="d-history"><header class="diff-head"><h3>Read your history</h3></header><div class="code"><div class="hunk"><span>@@ -0,0 +1,3 @@</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">1</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Commit graph across the current branch, or all branches.</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">2</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>A branch picker you can search, including remote branches.</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">3</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Fetched a branch and never checked it out? It's listed.</span></div></div></article><article class="feature-detail" id="d-rebase"><header class="diff-head"><h3>Rebase without a text editor</h3></header><div class="code"><div class="hunk"><span>@@ -1,3 +1,3 @@</span></div><div class="ln ctx"><span class="no no-old" aria-hidden="true">1</span><span class="no no-new" aria-hidden="true">1</span><span class="sign" aria-hidden="true"> </span><span class="tx">pick 37173a3 Speed up the product grid</span></div><div class="ln del"><span class="no no-old" aria-hidden="true">2</span><span class="no no-new" aria-hidden="true"></span><span class="sign" aria-hidden="true">-</span><span class="tx"><span class="sr">removed: </span>pick e9e2807 wip</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">2</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>squash e9e2807 wip</span></div><div class="ln del"><span class="no no-old" aria-hidden="true">3</span><span class="no no-new" aria-hidden="true"></span><span class="sign" aria-hidden="true">-</span><span class="tx"><span class="sr">removed: </span>pick 98a2cea Fix currency rouding</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">3</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>reword 98a2cea Fix currency rounding in receipts</span></div></div></article><article class="feature-detail" id="d-conflicts"><header class="diff-head"><h3>Resolve conflicts in 3 ways</h3></header><div class="code"><div class="hunk"><span>@@ -1,3 +1,2 @@</span></div><div class="ln del"><span class="no no-old" aria-hidden="true">1</span><span class="no no-new" aria-hidden="true"></span><span class="sign" aria-hidden="true">-</span><span class="tx"><span class="sr">removed: </span>&lt;&lt;&lt;&lt;&lt;&lt;&lt; ours</span></div><div class="ln del"><span class="no no-old" aria-hidden="true">2</span><span class="no no-new" aria-hidden="true"></span><span class="sign" aria-hidden="true">-</span><span class="tx"><span class="sr">removed: </span>=======</span></div><div class="ln del"><span class="no no-old" aria-hidden="true">3</span><span class="no no-new" aria-hidden="true"></span><span class="sign" aria-hidden="true">-</span><span class="tx"><span class="sr">removed: </span>&gt;&gt;&gt;&gt;&gt;&gt;&gt; theirs</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">1</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Take either side, both in either order, or a whole file.</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">2</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Or type the result yourself. CRLF files stay CRLF.</span></div></div></article><article class="feature-detail" id="d-github"><header class="diff-head"><h3>Pull requests and issues</h3></header><div class="code"><div class="hunk"><span>@@ -0,0 +1,3 @@</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">1</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Open pull requests with their checks and labels.</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">2</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Check one out in a click, including from forks.</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">3</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Create issues, or close one with your next commit.</span></div></div></article><article class="feature-detail" id="d-more"><header class="diff-head"><h3>Stashes and worktrees</h3></header><div class="code"><div class="hunk"><span>@@ -0,0 +1,2 @@</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">1</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Stash with untracked files, then apply, pop or drop.</span></div><div class="ln add"><span class="no no-old" aria-hidden="true"></span><span class="no no-new" aria-hidden="true">2</span><span class="sign" aria-hidden="true">+</span><span class="tx"><span class="sr">added: </span>Add a worktree to work on several branches side by side.</span></div></div></article></div>
+  </div>
+  <div class="pair">
+    <div class="surface note">
+      <h3>Commit messages from the AI you already use</h3>
+      <p>Press <kbd>⌘⇧G</kbd> and GitOS writes a message from your staged changes. It can use your signed-in Claude Code or Codex with no API key, or an Anthropic API key. It sends the diff and your recent commit subjects.</p>
+    </div>
+    <div class="surface note">
+      <h3>Updates that wait for you</h3>
+      <p>GitOS checks when it opens and every hour, then downloads in the background. It installs when you click Restart to Update, not when you quit.</p>
+      <div class="update-prompt" aria-hidden="true"><span class="update-title"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.6v6.2M5.4 8.4 8 11l2.6-2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>GitOS 0.1.4 is ready</span><span class="fake-btn">Restart to Update</span><span class="fake-link">Later</span></div>
+    </div>
+  </div>
 </section>
 
-<section class="split reverse">
-  <div>
-    <p class="eyebrow">AI, on your terms</p>
-    <h2>Commit messages from the AI you already use.</h2>
-    <p>Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>G</kbd> and GitOS writes a message from your staged changes, matching your repository's style. It works with your signed-in Claude Code or Codex, with no API key needed, or with an Anthropic API key.</p>
+<section id="themes" class="band">
+  <div class="heading">
+    <h2>15 themes, and this site wears them too</h2>
+    <p>Monokai, Tokyo Night, Dracula, Nord and more. Pick one here to recolor this page with the app's real palette.</p>
   </div>
-  <div>
-    <p class="eyebrow">Updates</p>
-    <h2>Updates that wait for you.</h2>
-    <p>GitOS downloads new versions in the background, then asks. Nothing installs until you click Restart to Update.</p>
+  <div class="theme-grid" data-theme-grid role="group" aria-label="Choose a theme"></div>
+  <figure class="shot themed"><img data-theme-shot src="assets/themes/gitos.png" width="1600" height="1018" loading="lazy" alt="The GitOS app in the selected theme"></figure>
+</section>
+
+<section id="releases">
+  <div class="split releases">
+    <div class="heading">
+      <h2>Releases</h2>
+      <p>GitOS is new and moves quickly. Installed copies update themselves.</p>
+      <p><a href="https://github.com/Dhunu/gitOS/releases">All release notes</a></p>
+    </div>
+    <div class="surface"><ul class="commits"><li><a class="commit" href="https://github.com/Dhunu/gitOS/releases/tag/v0.1.4"><span class="lane first" aria-hidden="true"></span><span class="commit-text"><span class="commit-title"><span class="ref head">v0.1.4</span><span class="commit-msg">14 themes, and updates that wait for you to restart.</span></span><span class="commit-meta"><span>Nov 6, 2026</span><code>4a975e9</code></span></span></a></li><li><a class="commit" href="https://github.com/Dhunu/gitOS/releases/tag/v0.1.3"><span class="lane" aria-hidden="true"></span><span class="commit-text"><span class="commit-title"><span class="ref">v0.1.3</span><span class="commit-msg">Sign in with an access token when an organization hasn&#x27;t approved GitOS.</span></span><span class="commit-meta"><span>Nov 6, 2026</span><code>5e1acf3</code></span></span></a></li><li><a class="commit" href="https://github.com/Dhunu/gitOS/releases/tag/v0.1.2"><span class="lane" aria-hidden="true"></span><span class="commit-text"><span class="commit-title"><span class="ref">v0.1.2</span><span class="commit-msg">A searchable branch picker that includes remote branches.</span></span><span class="commit-meta"><span>Nov 6, 2026</span><code>0e095ba</code></span></span></a></li><li><a class="commit" href="https://github.com/Dhunu/gitOS/releases/tag/v0.1.1"><span class="lane" aria-hidden="true"></span><span class="commit-text"><span class="commit-title"><span class="ref">v0.1.1</span><span class="commit-msg">Accounts stay signed in past 8 hours.</span></span><span class="commit-meta"><span>Nov 6, 2026</span><code>dd579ab</code></span></span></a></li><li><a class="commit" href="https://github.com/Dhunu/gitOS/releases/tag/v0.1.0"><span class="lane last" aria-hidden="true"></span><span class="commit-text"><span class="commit-title"><span class="ref">v0.1.0</span><span class="commit-msg">First public release.</span></span><span class="commit-meta"><span>Nov 6, 2026</span><code>e65ce02</code></span></span></a></li></ul></div>
   </div>
 </section>
 
-<section id="themes">
-  <div class="head">
-    <p class="eyebrow">Make it yours</p>
-    <h2>Fifteen themes. Try them on this page.</h2>
-    <p>Pick one, and this site changes with it. These are the same colors the app uses.</p>
+<section id="install" class="band">
+  <div class="heading"><h2>Install GitOS</h2></div>
+  <div class="split">
+    <div class="surface"><ol class="steps"><li class="step"><span class="tile" data-lane="2" aria-hidden="true">1</span><span>Download the <code>.dmg</code> and drag GitOS to Applications.</span></li><li class="step"><span class="tile" data-lane="2" aria-hidden="true">2</span><span>Open GitOS, then click <b>Done</b> when macOS blocks it.</span></li><li class="step"><span class="tile" data-lane="2" aria-hidden="true">3</span><span>In <b>System Settings, Privacy &amp; Security</b>, click <b>Open Anyway</b>.</span></li><li class="step"><span class="tile" data-lane="2" aria-hidden="true">4</span><span>Add your GitHub accounts in <b>Settings, Accounts</b>.</span></li></ol></div>
+    <div class="surface">
+      <p class="surface-head">Known limits</p>
+      <ul class="limits"><li class="limit"><span class="issue-dot" aria-hidden="true"></span><span><strong>macOS stops it the first time</strong><span class="row-sub">GitOS isn't notarized by Apple yet, so you need the Open Anyway step once per version.</span></span></li><li class="limit"><span class="issue-dot" aria-hidden="true"></span><span><strong>macOS 27 on Apple Silicon only</strong><span class="row-sub">Older macOS versions and Intel Macs can't run it.</span></span></li><li class="limit"><span class="issue-dot" aria-hidden="true"></span><span><strong>Some organizations must approve it</strong><span class="row-sub">Their private repos can look "not found". An owner can approve GitOS, or you can sign in with a classic access token, unless the organization blocks those too.</span></span></li></ul>
+    </div>
   </div>
-  <div class="chips" role="group" aria-label="Choose a theme"><button type="button" class="chip" data-theme="gitos" aria-pressed="true"><span class="dots" aria-hidden="true"><i style="background:#14171F"></i><i style="background:#2BA799"></i><i style="background:#EA8F95"></i></span>GitOS</button><button type="button" class="chip" data-theme="dark-plus" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#1E1E1E"></i><i style="background:#3794FF"></i><i style="background:#F48771"></i></span>Dark+</button><button type="button" class="chip" data-theme="monokai" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#272822"></i><i style="background:#A6E22E"></i><i style="background:#F92672"></i></span>Monokai</button><button type="button" class="chip" data-theme="tokyo-night" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#1A1B26"></i><i style="background:#7AA2F7"></i><i style="background:#F7768E"></i></span>Tokyo Night</button><button type="button" class="chip" data-theme="dracula" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#282A36"></i><i style="background:#BD93F9"></i><i style="background:#FF5555"></i></span>Dracula</button><button type="button" class="chip" data-theme="one-dark-pro" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#282C34"></i><i style="background:#61AFEF"></i><i style="background:#E06C75"></i></span>One Dark Pro</button><button type="button" class="chip" data-theme="github-dark" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#0D1117"></i><i style="background:#58A6FF"></i><i style="background:#F85149"></i></span>GitHub Dark</button><button type="button" class="chip" data-theme="github-light" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#FFFFFF"></i><i style="background:#0969DA"></i><i style="background:#CF222E"></i></span>GitHub Light</button><button type="button" class="chip" data-theme="nord" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#2E3440"></i><i style="background:#88C0D0"></i><i style="background:#E5949C"></i></span>Nord</button><button type="button" class="chip" data-theme="catppuccin-mocha" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#1E1E2E"></i><i style="background:#CBA6F7"></i><i style="background:#F38BA8"></i></span>Catppuccin Mocha</button><button type="button" class="chip" data-theme="night-owl" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#011627"></i><i style="background:#82AAFF"></i><i style="background:#EF5350"></i></span>Night Owl</button><button type="button" class="chip" data-theme="gruvbox-dark" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#282828"></i><i style="background:#FE8019"></i><i style="background:#FB4934"></i></span>Gruvbox Dark</button><button type="button" class="chip" data-theme="rose-pine" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#191724"></i><i style="background:#C4A7E7"></i><i style="background:#EB6F92"></i></span>Rosé Pine</button><button type="button" class="chip" data-theme="solarized-dark" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#002B36"></i><i style="background:#2AA198"></i><i style="background:#E8554F"></i></span>Solarized Dark</button><button type="button" class="chip" data-theme="solarized-light" aria-pressed="false"><span class="dots" aria-hidden="true"><i style="background:#FDF6E3"></i><i style="background:#1B7A72"></i><i style="background:#C6281F"></i></span>Solarized Light</button></div>
-  <figure class="shot wide"><img data-theme-shot src="assets/themes/gitos.png" width="1600" height="1018" loading="lazy" alt="GitOS in the selected theme"></figure>
 </section>
 
-<section class="split" id="install">
-  <div>
-    <p class="eyebrow">Getting started</p>
-    <h2>Install in a minute.</h2>
-    <p>GitOS isn't notarized by Apple yet, so macOS asks you to approve it the first time.</p>
-    <a class="button" href="https://github.com/Dhunu/gitOS/releases/latest">Download for Mac</a>
-  </div>
-  <ol class="steps">
-    <li>Open the <code>.dmg</code> and drag GitOS to Applications.</li>
-    <li>Open GitOS. When macOS blocks it, click <b>Done</b>.</li>
-    <li>In <b>System Settings › Privacy &amp; Security</b>, click <b>Open Anyway</b>.</li>
-    <li>Add your GitHub accounts in <b>Settings › Accounts</b>.</li>
-  </ol>
-</section>
-
-<section class="oss">
-  <h2>Open source, MIT licensed.</h2>
-  <p>Read the code, report a bug, or send a pull request. Everyone's welcome.</p>
-  <div class="actions">
-    <a class="button ghost" href="https://github.com/Dhunu/gitOS">Source code</a>
-    <a class="button ghost" href="https://github.com/Dhunu/gitOS/blob/main/CONTRIBUTING.md">Contributing guide</a>
+<section id="source">
+  <div class="split source">
+    <div class="heading">
+      <h2>Open source, under the MIT license</h2>
+      <p>Read the code, report a bug, or send a pull request.</p>
+    </div>
+    <div class="source-links">
+      <a class="row link-row" href="https://github.com/Dhunu/gitOS"><span class="row-title">Source code</span><span class="row-sub">Dhunu/gitOS on GitHub</span></a>
+      <a class="row link-row" href="https://github.com/Dhunu/gitOS/blob/main/CONTRIBUTING.md"><span class="row-title">Contributing guide</span><span class="row-sub">Set up, make a change, open a PR</span></a>
+      <a class="row link-row" href="https://github.com/Dhunu/gitOS/issues/new/choose"><span class="row-title">Report a bug</span><span class="row-sub">Or suggest a feature</span></a>
+    </div>
   </div>
 </section>
 </main>
-<footer>
-  <span>GitOS is an independent project and isn't affiliated with GitHub.</span>
-  <nav aria-label="Footer">
-    <a href="https://github.com/Dhunu/gitOS/releases">Releases</a>
-    <a href="https://github.com/Dhunu/gitOS/blob/main/SECURITY.md">Security</a>
-    <a href="https://github.com/Dhunu/gitOS/blob/main/LICENSE">License</a>
-  </nav>
+
+<footer class="status">
+  <span class="status-left"><span class="branch-dot" aria-hidden="true"></span><span>main</span><span>0.1.4</span></span>
+  <span class="status-right"><a href="https://github.com/Dhunu/gitOS/blob/main/LICENSE">MIT</a><a href="https://github.com/Dhunu/gitOS/blob/main/SECURITY.md">Security</a><a href="https://www.angelsaikia.com/">Made by Angel Saikia</a></span>
 </footer>
-<script>window.GITOS_THEMES=[{"id":"gitos","name":"GitOS","light":false,"accent":"#2BA799","head":"#FFC978","canvas":"#14171F","panel":"#1A1E28","field":"#10131A","added":"#6CC79A","modified":"#E3B66B","removed":"#EA8F95","renamed":"#93A8F2","conflict":"#B89AEE"},{"id":"dark-plus","name":"Dark+","light":false,"accent":"#3794FF","head":"#DCDCAA","canvas":"#1E1E1E","panel":"#252526","field":"#3C3C3C","added":"#81B88B","modified":"#E2C08D","removed":"#F48771","renamed":"#75BEFF","conflict":"#C586C0"},{"id":"monokai","name":"Monokai","light":false,"accent":"#A6E22E","head":"#FD971F","canvas":"#272822","panel":"#1E1F1C","field":"#35362E","added":"#A6E22E","modified":"#E6DB74","removed":"#F92672","renamed":"#66D9EF","conflict":"#AE81FF"},{"id":"tokyo-night","name":"Tokyo Night","light":false,"accent":"#7AA2F7","head":"#FF9E64","canvas":"#1A1B26","panel":"#16161E","field":"#14141B","added":"#9ECE6A","modified":"#E0AF68","removed":"#F7768E","renamed":"#7DCFFF","conflict":"#BB9AF7"},{"id":"dracula","name":"Dracula","light":false,"accent":"#BD93F9","head":"#FFB86C","canvas":"#282A36","panel":"#21222C","field":"#191A21","added":"#50FA7B","modified":"#F1FA8C","removed":"#FF5555","renamed":"#8BE9FD","conflict":"#FF79C6"},{"id":"one-dark-pro","name":"One Dark Pro","light":false,"accent":"#61AFEF","head":"#D19A66","canvas":"#282C34","panel":"#21252B","field":"#1D1F23","added":"#98C379","modified":"#E5C07B","removed":"#E06C75","renamed":"#56B6C2","conflict":"#C678DD"},{"id":"github-dark","name":"GitHub Dark","light":false,"accent":"#58A6FF","head":"#D29922","canvas":"#0D1117","panel":"#161B22","field":"#010409","added":"#3FB950","modified":"#D29922","removed":"#F85149","renamed":"#79C0FF","conflict":"#BC8CFF"},{"id":"github-light","name":"GitHub Light","light":true,"accent":"#0969DA","head":"#9A6700","canvas":"#FFFFFF","panel":"#F6F8FA","field":"#FFFFFF","added":"#1A7F37","modified":"#9A6700","removed":"#CF222E","renamed":"#0969DA","conflict":"#8250DF"},{"id":"nord","name":"Nord","light":false,"accent":"#88C0D0","head":"#D08770","canvas":"#2E3440","panel":"#272C36","field":"#3B4252","added":"#A3BE8C","modified":"#EBCB8B","removed":"#E5949C","renamed":"#81A1C1","conflict":"#B48EAD"},{"id":"catppuccin-mocha","name":"Catppuccin Mocha","light":false,"accent":"#CBA6F7","head":"#FAB387","canvas":"#1E1E2E","panel":"#181825","field":"#11111B","added":"#A6E3A1","modified":"#F9E2AF","removed":"#F38BA8","renamed":"#89B4FA","conflict":"#F5C2E7"},{"id":"night-owl","name":"Night Owl","light":false,"accent":"#82AAFF","head":"#F78C6C","canvas":"#011627","panel":"#01111D","field":"#0B253A","added":"#ADDB67","modified":"#ECC48D","removed":"#EF5350","renamed":"#7FDBCA","conflict":"#C792EA"},{"id":"gruvbox-dark","name":"Gruvbox Dark","light":false,"accent":"#FE8019","head":"#FABD2F","canvas":"#282828","panel":"#1D2021","field":"#3C3836","added":"#B8BB26","modified":"#FABD2F","removed":"#FB4934","renamed":"#83A598","conflict":"#D3869B"},{"id":"rose-pine","name":"Ros\u00e9 Pine","light":false,"accent":"#C4A7E7","head":"#F6C177","canvas":"#191724","panel":"#1F1D2E","field":"#26233A","added":"#9CCFD8","modified":"#F6C177","removed":"#EB6F92","renamed":"#7FB6C9","conflict":"#EBBCBA"},{"id":"solarized-dark","name":"Solarized Dark","light":false,"accent":"#2AA198","head":"#CB8A0C","canvas":"#002B36","panel":"#00212B","field":"#073642","added":"#93A516","modified":"#CB8A0C","removed":"#E8554F","renamed":"#4BA3E3","conflict":"#E0559A"},{"id":"solarized-light","name":"Solarized Light","light":true,"accent":"#1B7A72","head":"#8C6A00","canvas":"#FDF6E3","panel":"#EEE8D5","field":"#FFFBEF","added":"#657500","modified":"#8C6A00","removed":"#C6281F","renamed":"#1E6FB0","conflict":"#B42A6E"}];</script>
+
+<dialog class="alert" id="push-alert" aria-labelledby="push-title">
+  <h2 id="push-title">Push as <span data-alert-account></span>?</h2>
+  <p>Unpushed commits were authored as <span data-alert-email></span>, which isn't an email on <span data-alert-account></span>.</p>
+  <form method="dialog"><button value="anyway" class="alert-danger">Push Anyway</button><button value="cancel" class="alert-primary" autofocus>Cancel</button></form>
+</dialog>
+<script src="themes.js"></script>
 <script src="site.js"></script>
 </body>
 </html>

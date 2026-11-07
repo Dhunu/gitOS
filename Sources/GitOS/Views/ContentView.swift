@@ -104,7 +104,7 @@ private struct RepoRow: View {
 
     var body: some View {
         HStack {
-            RepoTile(name: repo.name)
+            RepoTile(name: repo.name, icon: RepoIconStore.shared.icon(for: repo, account: resolved.account))
             VStack(alignment: .leading, spacing: 1) {
                 Text(repo.name)
                 Text((repo.path as NSString).deletingLastPathComponent.abbreviatingWithTildeInPath)
@@ -125,17 +125,27 @@ private struct RepoRow: View {
     }
 }
 
-/// A repository's icon: its initial on a tint chosen from its name, so repos are easy to tell apart.
+/// A repository's icon: its website's favicon or owner's avatar when one is known,
+/// otherwise its initial on a tint chosen from its name, so repos are easy to tell apart.
 struct RepoTile: View {
     let name: String
+    var icon: NSImage?
 
     var body: some View {
-        let tint = Theme.lane(for: name)
-        Text(name.prefix(1).uppercased())
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundStyle(tint)
-            .frame(width: 24, height: 24)
-            .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 6))
+        if let icon {
+            Image(nsImage: icon)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 24, height: 24)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        } else {
+            let tint = Theme.lane(for: name)
+            Text(name.prefix(1).uppercased())
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .frame(width: 24, height: 24)
+                .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 6))
+        }
     }
 }
 
