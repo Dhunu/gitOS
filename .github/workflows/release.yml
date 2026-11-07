@@ -1,0 +1,149 @@
+# Releases GitOS when a pull request merges into main (or on demand from the Actions tab).
+#
+# The version bump comes from a label on the merged PR — release:major, release:minor or
+# release:patch (the default when no label is set). Label a PR release:skip to merge without
+# releasing. Manual runs pick the bump in the dispatch form.
+#
+# The version's source of truth is the latest v* git tag; the VERSION line in
+# scripts/build-app.sh is only patched in the runner's workspace, never committed,
+# so nothing here needs to push to the protected main branch.
+#
+# Secrets:
+#   SPARKLE_PRIVATE_KEY  (required)  EdDSA private key that signs updates, exported from
+#                                    the login Keychain with Sparkle's generate_keys -x.
+#   TAP_TOKEN            (optional)  Fine-grained PAT with Contents read/write on
+#                                    Dhunu/homebrew-tap; when set, the cask is bumped too.
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version part to bump (major = X.0.0, minor = 0.X.0, patch = 0.0.X)"
+        type: choice
+        options: [major, minor, patch]
+        default: patch
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+
+jobs:
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       !contains(github.event.pull_request.labels.*.name, 'release:skip'))
+    # The xcode-27 preview image is a macOS 26 host with the macOS 27 SDK: it can BUILD
+    # for macOS 27 but cannot RUN the app or its tests. Run `swift test` before merging.
+    runs-on: xcode-27
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pick the version bump
+        id: bump
+        run: |
+          BUMP=patch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BUMP="${{ inputs.bump }}"
+          else
+            case '${{ toJSON(github.event.pull_request.labels.*.name) }}' in
+              *release:major*) BUMP=major ;;
+              *release:minor*) BUMP=minor ;;
+            esac
+          fi
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "Bump: $BUMP"
+
+      - name: Compute the next version
+        id: version
+        run: |
+          LATEST="$(git tag --list 'v*' --sort=-v:refname | head -1)"
+          LATEST="${LATEST#v}"
+          IFS=. read -r MA MI PA <<< "${LATEST:-0.0.0}"
+          case "${{ steps.bump.outputs.bump }}" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+          esac
+          echo "version=$MA.$MI.$PA" >> "$GITHUB_OUTPUT"
+          echo "Releasing $MA.$MI.$PA (from v$LATEST)"
+
+      - name: Select Xcode 27
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)"
+          xcodebuild -version
+          swift --version
+
+      - name: Build the disk image
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i '' "s/^VERSION=\".*\"/VERSION=\"$VERSION\"/" scripts/build-app.sh
+          ./scripts/make-dmg.sh
+
+      - name: Sign the update and write the appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="v$VERSION"
+          DMG="build/GitOS-$VERSION.dmg"
+          KEY_FILE="$RUNNER_TEMP/sparkle_key"
+          printf '%s\n' "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE"
+          SIGNATURE="$(.build/artifacts/sparkle/Sparkle/bin/sign_update --ed-key-file "$KEY_FILE" "$DMG")"
+          rm -f "$KEY_FILE"
+          cat > build/appcast.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>GitOS</title>
+              <item>
+                <title>GitOS $VERSION</title>
+                <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
+                <sparkle:version>$VERSION</sparkle:version>
+                <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+                <sparkle:fullReleaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/$TAG</sparkle:fullReleaseNotesLink>
+                <enclosure url="https://github.com/${{ github.repository }}/releases/download/$TAG/GitOS-$VERSION.dmg" type="application/octet-stream" $SIGNATURE/>
+              </item>
+            </channel>
+          </rss>
+          XML
+
+      - name: Publish the GitHub release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          gh release create "v$VERSION" "build/GitOS-$VERSION.dmg" build/appcast.xml \
+            --repo "${{ github.repository }}" --title "GitOS $VERSION" --generate-notes
+
+      - name: Update the Homebrew tap
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "TAP_TOKEN not set; skipping the cask update."
+            exit 0
+          fi
+          VERSION="${{ steps.version.outputs.version }}"
+          CASK_REPO="Dhunu/homebrew-tap"
+          CASK_PATH="Casks/gitos.rb"
+          SHA256="$(shasum -a 256 "build/GitOS-$VERSION.dmg" | awk '{print $1}')"
+          OLD_SHA="$(gh api "repos/$CASK_REPO/contents/$CASK_PATH" --jq .sha)"
+          gh api "repos/$CASK_REPO/contents/$CASK_PATH" --jq .content | base64 -d \
+            | sed -e "s/^  version \".*\"/  version \"$VERSION\"/" \
+                  -e "s/^  sha256 \".*\"/  sha256 \"$SHA256\"/" > build/gitos.rb
+          gh api -X PUT "repos/$CASK_REPO/contents/$CASK_PATH" \
+            -f message="gitos $VERSION" \
+            -f content="$(base64 -i build/gitos.rb)" \
+            -f sha="$OLD_SHA" > /dev/null
+          echo "Updated $CASK_REPO to $VERSION"
