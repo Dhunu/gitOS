@@ -4,31 +4,38 @@ struct PullRequestsView: View {
     @Bindable var model: RepoModel
     @State private var selection: Int?
     @State private var showingCreate = false
+    @State private var triageMode = false
 
     var body: some View {
         if let reason = model.githubUnavailableReason {
             GitHubUnavailableView(title: "Pull Requests Unavailable", systemImage: "arrow.triangle.pull", reason: reason, model: model)
         } else {
             HSplitView {
-                List(model.pullRequests, selection: $selection) { pr in
-                    PullRequestRow(pr: pr, checks: model.prChecks[pr.number], isCurrent: model.currentPullRequest == pr)
-                        .tag(pr.number)
-                        .contextMenu {
-                            Button("Check Out") { Task { await model.checkout(pr) } }
-                            Button("Open on GitHub") { NSWorkspace.shared.open(pr.htmlURL) }
-                            Button("Copy Link") { copy(pr.htmlURL.absoluteString) }
+                Group {
+                    if triageMode {
+                        TriageList(model: model, selection: $selection)
+                    } else {
+                        List(model.pullRequests, selection: $selection) { pr in
+                            PullRequestRow(pr: pr, checks: model.prChecks[pr.number], isCurrent: model.currentPullRequest == pr)
+                                .tag(pr.number)
+                                .contextMenu {
+                                    Button("Check Out") { Task { await model.checkout(pr) } }
+                                    Button("Open on GitHub") { NSWorkspace.shared.open(pr.htmlURL) }
+                                    Button("Copy Link") { copy(pr.htmlURL.absoluteString) }
+                                }
                         }
+                        .overlay {
+                            if model.pullRequests.isEmpty {
+                                ContentUnavailableView("No Open Pull Requests", systemImage: "arrow.triangle.pull",
+                                                       description: Text(model.githubError ?? ""))
+                            }
+                        }
+                    }
                 }
                 .safeAreaInset(edge: .top, spacing: 0) { toolbar }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if !model.allPullRequestsLoaded {
                         ListLimitNotice(url: model.gitHubPage("pulls"))
-                    }
-                }
-                .overlay {
-                    if model.pullRequests.isEmpty {
-                        ContentUnavailableView("No Open Pull Requests", systemImage: "arrow.triangle.pull",
-                                               description: Text(model.githubError ?? ""))
                     }
                 }
                 .canvasList()
@@ -50,8 +57,16 @@ struct PullRequestsView: View {
                 .help(model.currentPullRequest != nil ? "This branch already has an open pull request"
                       : "Open a pull request from \(model.status.branch ?? "this branch")")
             Spacer()
-            Button("Reload", systemImage: "arrow.clockwise") { Task { await model.loadGitHub(force: true) } }
-                .labelStyle(.iconOnly)
+            Toggle("Triage", systemImage: "list.number", isOn: $triageMode)
+                .toggleStyle(.button)
+                .help("Group duplicate PRs and rank the rest by review-worthiness")
+            Button("Reload", systemImage: "arrow.clockwise") {
+                Task {
+                    await model.loadGitHub(force: true)
+                    if triageMode { await model.loadTriage(force: true) }
+                }
+            }
+            .labelStyle(.iconOnly)
         }
         .padding(8)
         .background(Theme.panel)
