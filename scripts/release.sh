@@ -41,3 +41,20 @@ git tag "$TAG"
 git push origin main "$TAG"
 gh release create "$TAG" "$DMG" build/appcast.xml --repo "$REPO" --title "GitOS $VERSION" --generate-notes
 echo "Published $TAG"
+
+# Point the Homebrew tap at the new version (best effort; the release itself is already out).
+CASK_REPO="Dhunu/homebrew-tap"
+CASK_PATH="Casks/gitos.rb"
+if OLD_CASK_SHA=$(gh api "repos/$CASK_REPO/contents/$CASK_PATH" --jq .sha 2>/dev/null); then
+  SHA256=$(shasum -a 256 "$DMG" | awk '{print $1}')
+  gh api "repos/$CASK_REPO/contents/$CASK_PATH" --jq .content | base64 -d \
+    | sed -e "s/^  version \".*\"/  version \"$VERSION\"/" \
+          -e "s/^  sha256 \".*\"/  sha256 \"$SHA256\"/" > build/gitos.rb
+  gh api -X PUT "repos/$CASK_REPO/contents/$CASK_PATH" \
+    -f message="gitos $VERSION" \
+    -f content="$(base64 -i build/gitos.rb)" \
+    -f sha="$OLD_CASK_SHA" > /dev/null
+  echo "Updated $CASK_REPO to $VERSION"
+else
+  echo "Homebrew tap not found; skipped cask update."
+fi

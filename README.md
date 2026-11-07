@@ -15,6 +15,13 @@ beyond git.
 **Requirements:** macOS 27 or later on Apple Silicon (M-series; Intel Macs aren't supported), and git.
 If you don't have git, run `xcode-select --install` in Terminal.
 
+**Or install with Homebrew:**
+
+```sh
+brew tap dhunu/tap
+brew install --cask gitos
+```
+
 ## Install
 
 1. Open the `.dmg` and drag **GitOS** onto **Applications**.
