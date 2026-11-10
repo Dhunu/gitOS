@@ -2,10 +2,23 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var app
+    @State private var focusMode = false
+    @State private var columns = NavigationSplitViewVisibility.all
+
+    /// Entering focus mode also tucks the repo sidebar away; leaving brings it back.
+    private var focusBinding: Binding<Bool> {
+        Binding(
+            get: { focusMode },
+            set: { on in
+                focusMode = on
+                withAnimation(.snappy(duration: 0.2)) { columns = on ? .detailOnly : .all }
+            }
+        )
+    }
 
     var body: some View {
         @Bindable var app = app
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columns) {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
         } detail: {
@@ -22,6 +35,11 @@ struct ContentView: View {
                 }
                 .background(Theme.canvas)
             }
+        }
+        .environment(\.focusMode, focusBinding)
+        .focusedSceneValue(\.focusMode, focusBinding)
+        .onChange(of: app.selectedRepoID) {
+            if focusMode { focusBinding.wrappedValue = false }
         }
         .sheet(isPresented: $app.showingClone) {
             CloneSheet()

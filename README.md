@@ -56,6 +56,10 @@ Settings › General has themes (Monokai, Tokyo Night, Dracula, One Dark Pro, Gi
 and more), background fetch, notifications, the menu bar icon, and
 **Install gitos Command** (then `gitos .` in any repo opens it in GitOS).
 
+**Focus mode** (⇧⌘F, or the expand button on any detail pane) gives the pane you're reading — a file's
+diff, the conflict editor, a commit, pull request, issue or stash — the whole window. Esc brings
+everything back, and ⌘1–⌘6 switch tabs while the tab bar is hidden.
+
 ✨ commit messages (⌘⇧G) and PR descriptions use whichever you pick in **Settings › AI**: the
 [Claude Code](https://claude.com/product/claude-code) or [Codex](https://developers.openai.com/codex/cli)
 CLI you're already signed in to, with no API key needed, or an Anthropic API key. To sign in, run `claude`

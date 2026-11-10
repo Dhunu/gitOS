@@ -4,16 +4,23 @@ struct ChangesView: View {
     @Bindable var model: RepoModel
     @State private var pendingDiscard: FileChange?
     @State private var lineSelection: Set<DiffLineID> = []
+    @Environment(\.focusMode) private var focusMode
+
+    /// Focus mode hides the file list, but only while a file is selected — otherwise
+    /// there would be nothing to look at and no way to pick a file.
+    private var listHidden: Bool { focusMode.wrappedValue && model.selectedChange != nil }
 
     var body: some View {
         HSplitView {
-            VStack(spacing: 0) {
-                fileList
-                Divider()
-                CommitBox(model: model)
-                    .background(Theme.panel)
+            if !listHidden {
+                VStack(spacing: 0) {
+                    fileList
+                    Divider()
+                    CommitBox(model: model)
+                        .background(Theme.panel)
+                }
+                .frame(minWidth: 280, idealWidth: 340, maxWidth: 520)
             }
-            .frame(minWidth: 280, idealWidth: 340, maxWidth: 520)
 
             diffPane
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -142,6 +149,7 @@ struct ChangesView: View {
                     Spacer()
                     Pill(text: change.area == .staged ? "staged" : change.area == .conflicted ? "conflicted" : "unstaged",
                          tint: change.area == .staged ? Theme.added : change.area == .conflicted ? Theme.conflict : Theme.modified)
+                    FocusModeButton()
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(Theme.panel)

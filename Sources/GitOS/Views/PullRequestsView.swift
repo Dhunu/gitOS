@@ -5,41 +5,23 @@ struct PullRequestsView: View {
     @State private var selection: Int?
     @State private var showingCreate = false
     @State private var triageMode = false
+    @Environment(\.focusMode) private var focusMode
+
+    private var selectedPR: GitHubRepoAPI.PullRequest? {
+        model.pullRequests.first { $0.number == selection }
+    }
+
+    /// Focus mode hides the PR list, but only while a pull request is selected.
+    private var listHidden: Bool { focusMode.wrappedValue && selectedPR != nil }
 
     var body: some View {
         if let reason = model.githubUnavailableReason {
             GitHubUnavailableView(title: "Pull Requests Unavailable", systemImage: "arrow.triangle.pull", reason: reason, model: model)
         } else {
             HSplitView {
-                Group {
-                    if triageMode {
-                        TriageList(model: model, selection: $selection)
-                    } else {
-                        List(model.pullRequests, selection: $selection) { pr in
-                            PullRequestRow(pr: pr, checks: model.prChecks[pr.number], isCurrent: model.currentPullRequest == pr)
-                                .tag(pr.number)
-                                .contextMenu {
-                                    Button("Check Out") { Task { await model.checkout(pr) } }
-                                    Button("Open on GitHub") { NSWorkspace.shared.open(pr.htmlURL) }
-                                    Button("Copy Link") { copy(pr.htmlURL.absoluteString) }
-                                }
-                        }
-                        .overlay {
-                            if model.pullRequests.isEmpty {
-                                ContentUnavailableView("No Open Pull Requests", systemImage: "arrow.triangle.pull",
-                                                       description: Text(model.githubError ?? ""))
-                            }
-                        }
-                    }
+                if !listHidden {
+                    list
                 }
-                .safeAreaInset(edge: .top, spacing: 0) { toolbar }
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !model.allPullRequestsLoaded {
-                        ListLimitNotice(url: model.gitHubPage("pulls"))
-                    }
-                }
-                .canvasList()
-                .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
 
                 detail.frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -48,6 +30,38 @@ struct PullRequestsView: View {
                 CreatePullRequestSheet(model: model) { selection = $0.number }
             }
         }
+    }
+
+    private var list: some View {
+        Group {
+            if triageMode {
+                TriageList(model: model, selection: $selection)
+            } else {
+                List(model.pullRequests, selection: $selection) { pr in
+                    PullRequestRow(pr: pr, checks: model.prChecks[pr.number], isCurrent: model.currentPullRequest == pr)
+                        .tag(pr.number)
+                        .contextMenu {
+                            Button("Check Out") { Task { await model.checkout(pr) } }
+                            Button("Open on GitHub") { NSWorkspace.shared.open(pr.htmlURL) }
+                            Button("Copy Link") { copy(pr.htmlURL.absoluteString) }
+                        }
+                }
+                .overlay {
+                    if model.pullRequests.isEmpty {
+                        ContentUnavailableView("No Open Pull Requests", systemImage: "arrow.triangle.pull",
+                                               description: Text(model.githubError ?? ""))
+                    }
+                }
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) { toolbar }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !model.allPullRequestsLoaded {
+                ListLimitNotice(url: model.gitHubPage("pulls"))
+            }
+        }
+        .canvasList()
+        .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
     }
 
     private var toolbar: some View {
@@ -74,12 +88,14 @@ struct PullRequestsView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let pr = model.pullRequests.first(where: { $0.number == selection }) {
+        if let pr = selectedPR {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(pr.title).font(.title2.weight(.semibold)).textSelection(.enabled)
                         Text("#\(pr.number)").font(.title2).foregroundStyle(.secondary)
+                        Spacer()
+                        FocusModeButton()
                     }
                     HStack(spacing: 6) {
                         AsyncImage(url: pr.user.avatarURL) { $0.resizable() } placeholder: { Color.secondary.opacity(0.2) }

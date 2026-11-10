@@ -71,6 +71,12 @@ Account resolution for a repo: repo override → longest matching folder rule �
 - ✨ Commit messages and PR descriptions with Claude (Messages API, `claude-opus-5-5` by default, effort `low`,
   server-side refusal fallback); key in Keychain, model in Settings › AI
 
+**Phase 4 — done**
+- AI code review for PRs, commits and uncommitted changes (0.2.0)
+- Focus mode (⇧⌘F or the expand button on any detail pane; Esc leaves): the pane you're reading —
+  diff, conflict editor, commit, pull request, issue or stash — takes the whole window, hiding the
+  sidebar, list, tab bar and status bar. ⌘1–⌘6 switch tabs while the tab bar is hidden.
+
 ## Setup note
 
 Device flow needs a GitHub OAuth App client ID (one-time):

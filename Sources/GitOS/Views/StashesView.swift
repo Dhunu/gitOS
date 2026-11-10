@@ -5,45 +5,20 @@ struct StashesView: View {
     @State private var showingStashPrompt = false
     @State private var stashMessage = ""
     @State private var pendingDrop: Stash?
+    @Environment(\.focusMode) private var focusMode
+
+    private var selectedStash: Stash? {
+        model.stashes.first { $0.id == model.selectedStashID }
+    }
+
+    /// Focus mode hides the stash list, but only while a stash is selected.
+    private var listHidden: Bool { focusMode.wrappedValue && selectedStash != nil }
 
     var body: some View {
         HSplitView {
-            List(model.stashes, selection: $model.selectedStashID) { stash in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(stash.message).lineLimit(2)
-                    HStack {
-                        Text(stash.ref).monospaced()
-                        Text("·")
-                        Text(stash.date, format: .relative(presentation: .named))
-                    }
-                    .font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 2)
-                .tag(stash.id)
-                .contextMenu {
-                    Button("Apply") { Task { await model.applyStash(stash, pop: false) } }
-                    Button("Pop") { Task { await model.applyStash(stash, pop: true) } }
-                    Divider()
-                    Button("Drop…", role: .destructive) { pendingDrop = stash }
-                }
+            if !listHidden {
+                list
             }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                HStack {
-                    Button("Stash Changes…", systemImage: "tray.and.arrow.down") { showingStashPrompt = true }
-                        .disabled(!model.status.hasChanges || model.isBusy)
-                    Spacer()
-                }
-                .padding(8)
-                .background(Theme.panel)
-            }
-            .overlay {
-                if model.stashes.isEmpty {
-                    ContentUnavailableView("No Stashes", systemImage: "tray",
-                                           description: Text("Stash uncommitted work to set it aside."))
-                }
-            }
-            .canvasList()
-            .frame(minWidth: 260, idealWidth: 320, maxWidth: 480)
 
             detail
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -68,18 +43,60 @@ struct StashesView: View {
         }
     }
 
+    private var list: some View {
+        List(model.stashes, selection: $model.selectedStashID) { stash in
+            VStack(alignment: .leading, spacing: 2) {
+                Text(stash.message).lineLimit(2)
+                HStack {
+                    Text(stash.ref).monospaced()
+                    Text("·")
+                    Text(stash.date, format: .relative(presentation: .named))
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
+            .tag(stash.id)
+            .contextMenu {
+                Button("Apply") { Task { await model.applyStash(stash, pop: false) } }
+                Button("Pop") { Task { await model.applyStash(stash, pop: true) } }
+                Divider()
+                Button("Drop…", role: .destructive) { pendingDrop = stash }
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Button("Stash Changes…", systemImage: "tray.and.arrow.down") { showingStashPrompt = true }
+                    .disabled(!model.status.hasChanges || model.isBusy)
+                Spacer()
+            }
+            .padding(8)
+            .background(Theme.panel)
+        }
+        .overlay {
+            if model.stashes.isEmpty {
+                ContentUnavailableView("No Stashes", systemImage: "tray",
+                                       description: Text("Stash uncommitted work to set it aside."))
+            }
+        }
+        .canvasList()
+        .frame(minWidth: 260, idealWidth: 320, maxWidth: 480)
+    }
+
     @ViewBuilder
     private var detail: some View {
-        if let stash = model.stashes.first(where: { $0.id == model.selectedStashID }) {
+        if let stash = selectedStash {
             VStack(spacing: 0) {
                 HStack {
                     Text(stash.message).font(.headline).lineLimit(1)
                     Spacer()
-                    Button("Apply") { Task { await model.applyStash(stash, pop: false) } }
-                    Button("Pop") { Task { await model.applyStash(stash, pop: true) } }
-                        .buttonStyle(.borderedProminent)
+                    Group {
+                        Button("Apply") { Task { await model.applyStash(stash, pop: false) } }
+                        Button("Pop") { Task { await model.applyStash(stash, pop: true) } }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .disabled(model.isBusy)
+                    FocusModeButton()
                 }
-                .disabled(model.isBusy)
                 .padding(10)
                 Divider()
                 ScrollView {

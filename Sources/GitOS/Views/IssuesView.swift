@@ -7,65 +7,28 @@ struct IssuesView: View {
     @State private var selection: Int?
     @State private var search = ""
     @State private var showingNew = false
+    @Environment(\.focusMode) private var focusMode
 
     private var filtered: [GitHubRepoAPI.Issue] {
         guard !search.isEmpty else { return model.issues }
         return model.issues.filter { $0.title.localizedCaseInsensitiveContains(search) || "#\($0.number)".hasPrefix(search) }
     }
 
+    private var selectedIssue: GitHubRepoAPI.Issue? {
+        model.issues.first { $0.number == selection }
+    }
+
+    /// Focus mode hides the issue list, but only while an issue is selected.
+    private var listHidden: Bool { focusMode.wrappedValue && selectedIssue != nil }
+
     var body: some View {
         if let reason = model.githubUnavailableReason {
             GitHubUnavailableView(title: "Issues Unavailable", systemImage: "smallcircle.filled.circle", reason: reason, model: model)
         } else {
             HSplitView {
-                List(filtered, selection: $selection) { issue in
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .top) {
-                            Image(systemName: "smallcircle.filled.circle").foregroundStyle(Theme.added)
-                            Text(issue.title).lineLimit(2)
-                        }
-                        HStack(spacing: 4) {
-                            Text("#\(issue.number)")
-                            Text("·")
-                            Text(issue.user.login)
-                            if issue.comments > 0 {
-                                Label("\(issue.comments)", systemImage: "bubble.left")
-                            }
-                        }
-                        .font(.caption).foregroundStyle(.secondary)
-                        if !issue.labels.isEmpty {
-                            HStack(spacing: 3) { ForEach(issue.labels.prefix(4), id: \.name) { LabelChip(label: $0) } }
-                        }
-                    }
-                    .padding(.vertical, 3)
-                    .tag(issue.number)
-                    .contextMenu {
-                        Button("Reference in Commit Message") { reference(issue, closes: false) }
-                        Button("Close with Next Commit") { reference(issue, closes: true) }
-                        Button("Open on GitHub") { NSWorkspace.shared.open(issue.htmlURL) }
-                    }
+                if !listHidden {
+                    list
                 }
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    HStack {
-                        TextField("Filter issues", text: $search).textFieldStyle(.roundedBorder)
-                        Button("New Issue…", systemImage: "plus") { showingNew = true }
-                    }
-                    .padding(8)
-                    .background(Theme.panel)
-                }
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !model.allIssuesLoaded {
-                        ListLimitNotice(url: model.gitHubPage("issues"))
-                    }
-                }
-                .overlay {
-                    if model.issues.isEmpty {
-                        ContentUnavailableView("No Open Issues", systemImage: "checkmark.circle",
-                                               description: Text(model.githubError ?? ""))
-                    }
-                }
-                .canvasList()
-                .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
 
                 detail.frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -76,14 +39,67 @@ struct IssuesView: View {
         }
     }
 
+    private var list: some View {
+        List(filtered, selection: $selection) { issue in
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .top) {
+                    Image(systemName: "smallcircle.filled.circle").foregroundStyle(Theme.added)
+                    Text(issue.title).lineLimit(2)
+                }
+                HStack(spacing: 4) {
+                    Text("#\(issue.number)")
+                    Text("·")
+                    Text(issue.user.login)
+                    if issue.comments > 0 {
+                        Label("\(issue.comments)", systemImage: "bubble.left")
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+                if !issue.labels.isEmpty {
+                    HStack(spacing: 3) { ForEach(issue.labels.prefix(4), id: \.name) { LabelChip(label: $0) } }
+                }
+            }
+            .padding(.vertical, 3)
+            .tag(issue.number)
+            .contextMenu {
+                Button("Reference in Commit Message") { reference(issue, closes: false) }
+                Button("Close with Next Commit") { reference(issue, closes: true) }
+                Button("Open on GitHub") { NSWorkspace.shared.open(issue.htmlURL) }
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                TextField("Filter issues", text: $search).textFieldStyle(.roundedBorder)
+                Button("New Issue…", systemImage: "plus") { showingNew = true }
+            }
+            .padding(8)
+            .background(Theme.panel)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !model.allIssuesLoaded {
+                ListLimitNotice(url: model.gitHubPage("issues"))
+            }
+        }
+        .overlay {
+            if model.issues.isEmpty {
+                ContentUnavailableView("No Open Issues", systemImage: "checkmark.circle",
+                                       description: Text(model.githubError ?? ""))
+            }
+        }
+        .canvasList()
+        .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
+    }
+
     @ViewBuilder
     private var detail: some View {
-        if let issue = model.issues.first(where: { $0.number == selection }) {
+        if let issue = selectedIssue {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(issue.title).font(.title2.weight(.semibold)).textSelection(.enabled)
                         Text("#\(issue.number)").font(.title2).foregroundStyle(.secondary)
+                        Spacer()
+                        FocusModeButton()
                     }
                     Text("Opened by \(issue.user.login) \(issue.createdAt.formatted(.relative(presentation: .named)))")
                         .font(.callout).foregroundStyle(.secondary)

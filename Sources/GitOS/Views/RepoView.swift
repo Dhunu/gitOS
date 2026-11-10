@@ -8,6 +8,7 @@ struct RepoView: View {
     @State private var showingNewBranch = false
     @State private var showingTokenSignIn = false
     @State private var watcher: RepoWatcher?
+    @Environment(\.focusMode) private var focusMode
 
     enum Tab: String, CaseIterable {
         case changes = "Changes", history = "History", pulls = "Pull Requests", issues = "Issues"
@@ -27,15 +28,20 @@ struct RepoView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            RepoTabBar(selection: $tab, count: count(for:))
-            Divider()
-            if model.app.hasRejectedSignIn(for: model.ref), let account = model.resolved.account {
-                ReconnectBanner(account: account)
+            // Focus mode clears everything around the content, so the selected pane
+            // gets the whole window. The operation banner stays: a merge or rebase
+            // in progress is too important to hide.
+            if !focusMode.wrappedValue {
+                RepoTabBar(selection: $tab, count: count(for:))
                 Divider()
-            }
-            if model.isGitButlerWorkspace {
-                GitButlerBanner(model: model)
-                Divider()
+                if model.app.hasRejectedSignIn(for: model.ref), let account = model.resolved.account {
+                    ReconnectBanner(account: account)
+                    Divider()
+                }
+                if model.isGitButlerWorkspace {
+                    GitButlerBanner(model: model)
+                    Divider()
+                }
             }
             if let operation = model.operation {
                 OperationBanner(model: model, operation: operation) {
@@ -57,8 +63,10 @@ struct RepoView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Divider()
-            RepoStatusBar(model: model)
+            if !focusMode.wrappedValue {
+                Divider()
+                RepoStatusBar(model: model)
+            }
         }
         .background(Theme.canvas)
         .navigationTitle(model.ref.name)
@@ -102,6 +110,19 @@ struct RepoView: View {
             Button("Refresh") { Task { await model.refresh() } }
                 .keyboardShortcut("r")
                 .hidden()
+            // The tab bar is gone in focus mode, so the sections stay reachable from the keyboard.
+            ForEach(Array(Tab.allCases.enumerated()), id: \.element) { index, target in
+                Button(target.rawValue) { withAnimation(.snappy(duration: 0.2)) { tab = target } }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                    .hidden()
+            }
+            if focusMode.wrappedValue {
+                Button("Exit Focus Mode") {
+                    withAnimation(.snappy(duration: 0.2)) { focusMode.wrappedValue = false }
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+                .hidden()
+            }
         }
         .alert("Git error", isPresented: Binding(
             get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil; model.errorOffersOrgAccess = false } }
