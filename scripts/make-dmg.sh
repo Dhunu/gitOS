@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Builds a shareable disk image: build/GitOS-<version>.dmg, with GitOS.app and an Applications shortcut.
-# The app is ad-hoc signed, so other Macs need the first-launch step in the README.
+# The app isn't notarized, so other Macs need the first-launch step in the README.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

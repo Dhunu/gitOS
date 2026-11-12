@@ -56,8 +56,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 ditto "$(dirname "$BIN")/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/GitOS"
-codesign --force --deep --sign - "$APP/Contents/Frameworks/Sparkle.framework" >/dev/null
-codesign --force --sign - "$APP" >/dev/null
+# A stable certificate keeps the app's identity the same across builds, so the Keychain doesn't
+# ask for the token password again after every update. Falls back to ad-hoc (e.g. CI, contributors).
+IDENTITY="${SIGN_IDENTITY:-Apple Development: angelsaikia333@gmail.com (23445DDSB9)}"
+security find-identity -v -p codesigning | grep -qF "\"$IDENTITY\"" || IDENTITY=-
+codesign --force --deep --sign "$IDENTITY" "$APP/Contents/Frameworks/Sparkle.framework" >/dev/null
+codesign --force --sign "$IDENTITY" "$APP" >/dev/null
 echo "Built $APP"
 
 if [[ "${1:-}" == "--install" ]]; then
