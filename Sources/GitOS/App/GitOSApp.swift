@@ -30,6 +30,7 @@ struct GitOSApp: App {
                 Button("Clone Repository…") { app.showingClone = true }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
             }
+            FocusModeCommands()
             CommandMenu("Repository") {
                 Button("Fetch All Repositories") { Task { await app.sync.fetchAll() } }
                     .keyboardShortcut("f", modifiers: [.command, .option])

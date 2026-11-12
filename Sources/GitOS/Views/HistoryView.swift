@@ -3,50 +3,20 @@ import SwiftUI
 struct HistoryView: View {
     @Bindable var model: RepoModel
     @State private var rebaseCommits: [Commit]?
+    @Environment(\.focusMode) private var focusMode
+
+    private var selectedCommit: Commit? {
+        model.commits.first { $0.id == model.selectedCommitID }
+    }
+
+    /// Focus mode hides the commit list, but only while a commit is selected.
+    private var listHidden: Bool { focusMode.wrappedValue && selectedCommit != nil }
 
     var body: some View {
         HSplitView {
-            List(selection: $model.selectedCommitID) {
-                ForEach(Array(model.commits.enumerated()), id: \.element.id) { index, commit in
-                CommitRow(commit: commit, graph: index < model.graph.count ? model.graph[index] : nil)
-                    .tag(commit.id)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 8))
-                    .contextMenu {
-                        Button("Interactive Rebase from Here…") { startRebase(from: commit) }
-                        Divider()
-                        Button("Copy SHA") { copy(commit.sha) }
-                        if let web = model.primaryRemote?.webURL {
-                            Button("View on GitHub") {
-                                NSWorkspace.shared.open(web.appendingPathComponent("commit/\(commit.sha)"))
-                            }
-                        }
-                    }
-                }
+            if !listHidden {
+                commitList
             }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                HStack {
-                    Toggle("All branches", isOn: $model.showAllBranches)
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-                    Spacer()
-                    Text("\(model.commits.count)\(model.hasMoreHistory ? "+" : "") commits")
-                        .font(.caption).foregroundStyle(.secondary)
-                    if model.hasMoreHistory {
-                        Button("Load More") { Task { await model.loadMoreHistory() } }
-                            .buttonStyle(.borderless)
-                            .font(.caption)
-                    }
-                }
-                .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Theme.panel)
-            }
-            .overlay {
-                if model.commits.isEmpty {
-                    ContentUnavailableView("No Commits Yet", systemImage: "clock")
-                }
-            }
-            .canvasList()
-            .frame(minWidth: 280, idealWidth: 360, maxWidth: 560)
 
             detail
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -59,13 +29,61 @@ struct HistoryView: View {
         }
     }
 
+    private var commitList: some View {
+        List(selection: $model.selectedCommitID) {
+            ForEach(Array(model.commits.enumerated()), id: \.element.id) { index, commit in
+            CommitRow(commit: commit, graph: index < model.graph.count ? model.graph[index] : nil)
+                .tag(commit.id)
+                .listRowInsets(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 8))
+                .contextMenu {
+                    Button("Interactive Rebase from Here…") { startRebase(from: commit) }
+                    Divider()
+                    Button("Copy SHA") { copy(commit.sha) }
+                    if let web = model.primaryRemote?.webURL {
+                        Button("View on GitHub") {
+                            NSWorkspace.shared.open(web.appendingPathComponent("commit/\(commit.sha)"))
+                        }
+                    }
+                }
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Toggle("All branches", isOn: $model.showAllBranches)
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                Spacer()
+                Text("\(model.commits.count)\(model.hasMoreHistory ? "+" : "") commits")
+                    .font(.caption).foregroundStyle(.secondary)
+                if model.hasMoreHistory {
+                    Button("Load More") { Task { await model.loadMoreHistory() } }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(Theme.panel)
+        }
+        .overlay {
+            if model.commits.isEmpty {
+                ContentUnavailableView("No Commits Yet", systemImage: "clock")
+            }
+        }
+        .canvasList()
+        .frame(minWidth: 280, idealWidth: 360, maxWidth: 560)
+    }
+
     @ViewBuilder
     private var detail: some View {
-        if let commit = model.commits.first(where: { $0.id == model.selectedCommitID }) {
+        if let commit = selectedCommit {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(commit.subject).font(.title3.weight(.semibold)).textSelection(.enabled)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(commit.subject).font(.title3.weight(.semibold)).textSelection(.enabled)
+                            Spacer()
+                            FocusModeButton()
+                        }
                         HStack(spacing: 12) {
                             Label("\(commit.authorName) <\(commit.authorEmail)>", systemImage: "person")
                             Label(commit.date.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")

@@ -75,6 +75,7 @@ struct ConflictEditorView: View {
                 Button("Reload from Disk") { load() }
             }
             .fixedSize()
+            FocusModeButton()
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
     }
