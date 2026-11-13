@@ -131,16 +131,29 @@ struct OperationBanner: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
+            // Less common ways out stay one click away without competing with the next step.
+            Menu {
+                if case .rebase = operation {
+                    Button("Skip Commit") { Task { await model.skipRebaseStep() } }
+                }
+                Button("Abort \(operation.command.capitalized)", role: .destructive) { Task { await model.abortOperation() } }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(operation.command == "rebase" ? "Skip this commit or abort the rebase" : "Abort the \(operation.command)")
+            .accessibilityLabel("More options")
+            // The prominent button is always the next step: resolve, then continue.
             if conflicts > 0 {
                 Button("Resolve Conflicts…", action: onResolve)
+                    .buttonStyle(.borderedProminent)
+            } else {
+                Button("Continue") { Task { await model.continueOperation() } }
+                    .buttonStyle(.borderedProminent)
             }
-            if case .rebase = operation {
-                Button("Skip Commit") { Task { await model.skipRebaseStep() } }
-            }
-            Button("Abort", role: .destructive) { Task { await model.abortOperation() } }
-            Button("Continue") { Task { await model.continueOperation() } }
-                .buttonStyle(.borderedProminent)
-                .disabled(conflicts > 0)
         }
         .disabled(model.isBusy)
         .padding(.horizontal, 14).padding(.vertical, 10)

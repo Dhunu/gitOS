@@ -169,28 +169,20 @@ struct RepoTile: View {
     }
 }
 
+/// A way into account setup. It deliberately doesn't show the default account here: under the repo
+/// list it read as "the account in use", which is per repository (see the toolbar).
 private struct DefaultAccountFooter: View {
     @Environment(AppState.self) private var app
 
     var body: some View {
-        HStack(spacing: 8) {
-            if let account = app.account(id: app.defaultAccountID) {
-                AvatarView(account: account, size: 22)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(account.title).font(.callout).lineLimit(1)
-                    Text("Default account").font(.caption).foregroundStyle(.secondary)
-                }
-            } else {
-                Image(systemName: "person.crop.circle.badge.plus")
-                Text("No accounts").font(.callout)
-            }
-            Spacer()
-            SettingsLink {
-                Image(systemName: "person.2.badge.gearshape")
-            }
-            .buttonStyle(.borderless)
-            .help("Manage accounts")
+        SettingsLink {
+            Label(app.accounts.isEmpty ? "Add a GitHub Account…" : "Accounts & Rules…",
+                  systemImage: app.accounts.isEmpty ? "person.crop.circle.badge.plus" : "person.2.badge.gearshape")
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .help("Manage GitHub accounts, folder rules and the default account")
         .padding(10)
     }
 }

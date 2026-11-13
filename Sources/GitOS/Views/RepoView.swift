@@ -69,6 +69,19 @@ struct RepoView: View {
             }
         }
         .background(Theme.canvas)
+        .overlay(alignment: .bottomTrailing) {
+            if let notice = model.notice {
+                NoticeToast(notice: notice) { model.notice = nil }
+                    .padding(.trailing, 16).padding(.bottom, 40)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: notice.id) {
+                        AccessibilityNotification.Announcement("\(notice.title) \(notice.detail)").post()
+                        try? await Task.sleep(for: .seconds(4))
+                        if model.notice?.id == notice.id { model.notice = nil }
+                    }
+            }
+        }
+        .animation(.snappy(duration: 0.25), value: model.notice)
         .navigationTitle(model.ref.name)
         .navigationSubtitle(model.status.branch ?? "detached HEAD")
         .toolbar {
@@ -336,15 +349,20 @@ struct AccountMenu: View {
 struct AvatarView: View {
     let account: Account
     var size: CGFloat = 20
+    @Environment(AppState.self) private var app: AppState?
 
     var body: some View {
         AsyncImage(url: account.avatarURL.map { URL(string: $0.absoluteString + "&s=\(Int(size * 3))") ?? $0 }) { image in
             image.resizable().scaledToFill()
         } placeholder: {
-            Text(account.login.prefix(1).uppercased())
+            // One person often has several accounts with the same first letter, so the letter comes
+            // from the label (Work → W) and the colour from the account's place in the list.
+            let tint = Theme.lanes[Account.badgeIndex(of: account.id, in: app?.accounts ?? [account]) % Theme.lanes.count]
+            Text(account.badgeInitial)
                 .font(.system(size: size * 0.5, weight: .semibold))
+                .foregroundStyle(tint)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(.tint.opacity(0.25))
+                .background(tint.opacity(0.22))
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
@@ -616,5 +634,29 @@ private struct ReconnectBanner: View {
         .sheet(isPresented: $showingSignIn) {
             SignInSheet { _ in }
         }
+    }
+}
+
+/// Bottom-corner confirmation that fades on its own; click to dismiss early.
+private struct NoticeToast: View {
+    let notice: RepoModel.Notice
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title2)
+                .foregroundStyle(Theme.added)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(notice.title).fontWeight(.medium)
+                Text(notice.detail).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.added.opacity(0.45)) }
+        .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
+        .accessibilityElement(children: .combine)
+        .onTapGesture(perform: dismiss)
     }
 }

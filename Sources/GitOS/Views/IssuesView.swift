@@ -158,7 +158,7 @@ private struct NewIssueSheet: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Create Issue") {
+                Button(Account.titled("Create Issue", as: model.resolved.account?.login)) {
                     working = true
                     Task {
                         do {

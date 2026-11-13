@@ -152,7 +152,7 @@ struct ReviewPanel: View {
     private func actions(_ review: CodeReview.Review) -> some View {
         HStack(spacing: 8) {
             if let number = pullRequestNumber {
-                Button(posting ? "Posting…" : posted ? "Posted ✓" : "Post as PR Comment") {
+                Button(posting ? "Posting…" : posted ? "Posted ✓" : model.resolved.account.map { "Post as @\($0.login)" } ?? "Post as PR Comment") {
                     Task {
                         posting = true
                         posted = await model.postReviewComment(for: number)
@@ -160,7 +160,7 @@ struct ReviewPanel: View {
                     }
                 }
                 .disabled(posting || posted)
-                .help("Posts the whole review as one comment on #\(number), from your account")
+                .help("Posts the whole review as one comment on #\(number)\(model.resolved.account.map { " as @\($0.login)" } ?? "")")
             }
             Button(copied ? "Copied ✓" : "Copy as Markdown") {
                 copyToPasteboard(CodeReview.markdown(for: review, heading: headingName))
