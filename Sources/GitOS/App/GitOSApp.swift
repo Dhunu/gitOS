@@ -11,8 +11,12 @@ struct GitOSApp: App {
             ContentView()
                 .environment(app)
                 .themedWindow()
+                .upgradeSheet()
                 .frame(minWidth: 960, minHeight: 600)
-                .task { app.sync.start() }
+                .task {
+                    app.sync.start()
+                    await Licensing.shared.refreshIfNeeded()
+                }
         }
         .handlesExternalEvents(matching: [])
         .commands {
@@ -41,6 +45,7 @@ struct GitOSApp: App {
             SettingsView()
                 .environment(app)
                 .themedWindow()
+                .upgradeSheet()
         }
 
         MenuBarExtra(isInserted: $app.preferences.showMenuBarExtra) {

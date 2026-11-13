@@ -14,6 +14,8 @@ struct RepoView: View {
         case changes = "Changes", history = "History", pulls = "Pull Requests", issues = "Issues"
         case stashes = "Stashes", worktrees = "Worktrees"
 
+        var isPro: Bool { self == .pulls || self == .issues || self == .worktrees }
+
         var icon: String {
             switch self {
             case .changes: "square.and.pencil"
@@ -57,10 +59,10 @@ struct RepoView: View {
                 switch tab {
                 case .changes: ChangesView(model: model)
                 case .history: HistoryView(model: model)
-                case .pulls: PullRequestsView(model: model)
-                case .issues: IssuesView(model: model) { tab = .changes }
+                case .pulls: ProGate(feature: .pullRequests) { PullRequestsView(model: model) }
+                case .issues: ProGate(feature: .issues) { IssuesView(model: model) { tab = .changes } }
                 case .stashes: StashesView(model: model)
-                case .worktrees: WorktreesView(model: model)
+                case .worktrees: ProGate(feature: .worktrees) { WorktreesView(model: model) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -164,7 +166,7 @@ struct RepoView: View {
     }
 
     @ViewBuilder private var checksMenu: some View {
-        if let checks = model.headChecks, checks.state != .none {
+        if Licensing.shared.isPro, let checks = model.headChecks, checks.state != .none {
             Menu {
                 ForEach(Array(checks.items.enumerated()), id: \.offset) { _, item in
                     Button {
@@ -533,6 +535,7 @@ private struct RepoTabBar: View {
         return HStack(spacing: 5) {
             if !Theme.isFlat { Image(systemName: tab.icon).font(.caption) }
             Text(tab.rawValue).font(Theme.isFlat ? .body : .callout.weight(selected ? .semibold : .regular))
+            if tab.isPro && !Licensing.shared.isPro { ProBadge() }
             if count(tab) > 0 {
                 Text("\(count(tab))")
                     .font(.caption2.monospacedDigit().weight(.medium))

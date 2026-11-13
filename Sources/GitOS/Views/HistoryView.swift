@@ -38,7 +38,9 @@ struct HistoryView: View {
                 .tag(commit.id)
                 .listRowInsets(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 8))
                 .contextMenu {
-                    Button("Interactive Rebase from Here…") { startRebase(from: commit) }
+                    Button("Interactive Rebase from Here…") {
+                        if Licensing.shared.require(.rebase) { startRebase(from: commit) }
+                    }
                     Divider()
                     Button("Copy SHA") { copy(commit.sha) }
                     if let web = model.primaryRemote?.webURL {
@@ -100,10 +102,17 @@ struct HistoryView: View {
                             Text("\(model.commitDiffs.count) changed file\(model.commitDiffs.count == 1 ? "" : "s")")
                                 .font(.caption).foregroundStyle(.secondary)
                             Spacer()
-                            ReviewButton(model: model, target: .commit(commit.sha), title: "Review Commit")
+                            if Licensing.shared.isPro {
+                                ReviewButton(model: model, target: .commit(commit.sha), title: "Review Commit")
+                                    .controlSize(.small)
+                            } else {
+                                Button { Licensing.shared.require(.ai) } label: {
+                                    HStack(spacing: 4) { Label("Review Commit", systemImage: "sparkles"); ProBadge() }
+                                }
                                 .controlSize(.small)
+                            }
                         }
-                        ReviewPanel(model: model, target: .commit(commit.sha))
+                        if Licensing.shared.isPro { ReviewPanel(model: model, target: .commit(commit.sha)) }
                     }
                     .padding(14)
 
