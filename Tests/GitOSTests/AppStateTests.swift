@@ -4,6 +4,13 @@ import Testing
 @testable import GitOS
 
 struct AppStateTests {
+    @Test func windowStyleDefaultsToGlassForOldOrUnknownPreferences() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Preferences.self, from: Data(json.utf8)) }
+        #expect(try decode(#"{"themeID":"monokai"}"#).windowStyle == .glass)
+        #expect(try decode(#"{"windowStyle":"neon"}"#).windowStyle == .glass)
+        #expect(try decode(#"{"windowStyle":"flat"}"#).windowStyle == .flat)
+    }
+
     @Test func emptySavedClientIDUsesBuiltIn() {
         #expect(!AppState.builtInGitHubClientID.isEmpty)
         #expect(AppState.clientID(saved: "") == AppState.builtInGitHubClientID)

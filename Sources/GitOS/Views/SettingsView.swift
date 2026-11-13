@@ -39,6 +39,12 @@ private struct GeneralSettings: View {
             }
 
             Section("Appearance") {
+                Picker("Window style", selection: $app.preferences.windowStyle) {
+                    ForEach(WindowStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Text("Glass uses macOS's translucent sidebar and toolbar. Flat uses solid panels, like the GitOS website.")
+                    .font(.caption).foregroundStyle(.secondary)
                 ThemePicker(selection: $app.preferences.themeID)
             }
 
@@ -311,7 +317,7 @@ struct SignInSheet: View {
                     .font(.system(size: 34, weight: .bold, design: .monospaced))
                     .textSelection(.enabled)
                 Button("Copy Code & Open GitHub") { open(code) }
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text("Waiting for you to authorize…").foregroundStyle(.secondary)

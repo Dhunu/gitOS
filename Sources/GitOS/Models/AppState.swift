@@ -10,6 +10,7 @@ struct Preferences: Codable, Equatable, Sendable {
     var aiModel = Claude.defaultModel
     var aiProvider = AIProvider.claudeCode
     var themeID = ThemePalette.gitOS.id
+    var windowStyle = WindowStyle.glass
 
     init() {}
 
@@ -24,6 +25,7 @@ struct Preferences: Codable, Equatable, Sendable {
         aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel) ?? d.aiModel
         aiProvider = try c.decodeIfPresent(AIProvider.self, forKey: .aiProvider) ?? d.aiProvider
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? d.themeID
+        windowStyle = (try? c.decodeIfPresent(WindowStyle.self, forKey: .windowStyle)) ?? d.windowStyle
     }
 }
 
@@ -55,10 +57,11 @@ final class AppState {
     var preferences = Preferences() {
         didSet {
             save()
-            ThemeStore.shared.palette = .named(preferences.themeID)
-            // Changing the theme shouldn't restart background fetching.
+            ThemeStore.shared.apply(preferences)
+            // Changing the look shouldn't restart background fetching.
             var previous = oldValue
             previous.themeID = preferences.themeID
+            previous.windowStyle = preferences.windowStyle
             if previous != preferences { sync.preferencesChanged() }
         }
     }
@@ -310,7 +313,7 @@ final class AppState {
         githubClientID = Self.clientID(saved: state.githubClientID)
         selectedRepoID = state.selectedRepoID
         preferences = state.preferences ?? Preferences()
-        ThemeStore.shared.palette = .named(preferences.themeID)
+        ThemeStore.shared.apply(preferences)
     }
 
     private func save() {

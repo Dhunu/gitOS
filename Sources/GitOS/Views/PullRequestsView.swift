@@ -111,7 +111,7 @@ struct PullRequestsView: View {
                     .font(.callout)
                     HStack {
                         Button("Check Out", systemImage: "arrow.down.to.line") { Task { await model.checkout(pr) } }
-                            .buttonStyle(.borderedProminent)
+                            .prominentButton()
                             .disabled(model.isBusy || model.status.hasChanges)
                             .help(model.status.hasChanges ? "Commit or stash your changes first" : "Switch to this pull request's branch")
                         Button("Open on GitHub", systemImage: "safari") { NSWorkspace.shared.open(pr.htmlURL) }

@@ -106,7 +106,7 @@ struct IssuesView: View {
                         .font(.callout).foregroundStyle(.secondary)
                     HStack {
                         Button("Close with Next Commit", systemImage: "checkmark.circle") { reference(issue, closes: true) }
-                            .buttonStyle(.borderedProminent)
+                            .prominentButton()
                             .help("Adds “Fixes #\(issue.number)” to the commit message")
                         Button("Reference", systemImage: "number") { reference(issue, closes: false) }
                         Button("Open on GitHub", systemImage: "safari") { NSWorkspace.shared.open(issue.htmlURL) }

@@ -50,7 +50,7 @@ struct TriageList: View {
                     Button("Close with Comment…") {
                         closing = CloseRequest(numbers: checked.sorted(), template: PRTriage.closeTemplate(keeping: nil))
                     }
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
                 }
                 .padding(8)
                 .background(Theme.panel)
@@ -229,7 +229,7 @@ struct CloseWithCommentSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }.disabled(working)
                 Button(working ? "Closing…" : Account.titled("Comment and Close", as: model.resolved.account?.login)) { Task { await close() } }
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
                     .disabled(working)
             }
         }

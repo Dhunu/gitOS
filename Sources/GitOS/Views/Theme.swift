@@ -5,6 +5,10 @@ import SwiftUI
 enum Theme {
     static var palette: ThemePalette { ThemeStore.shared.palette }
 
+    static var isFlat: Bool { ThemeStore.shared.style == .flat }
+    /// Solid surfaces instead of the system's translucent ones: any custom theme, or the flat style.
+    static var solid: Bool { palette.isCustom || isFlat }
+
     static var accent: Color { palette.accent.color }
     static var head: Color { palette.head.color }
 
@@ -12,6 +16,10 @@ enum Theme {
     static var canvas: Color { palette.canvas.color }
     static var panel: Color { palette.panel.color }
     static var field: Color { palette.field.color }
+    /// Flat style: hairline borders, and the fill and border of toolbar chips.
+    static var line: Color { .primary.opacity(0.1) }
+    static var chip: Color { .primary.opacity(0.05) }
+    static var chipBorder: Color { .primary.opacity(0.12) }
 
     // Status
     static var added: Color { palette.added.color }
@@ -112,5 +120,52 @@ extension View {
     /// A list that sits on the GitOS canvas instead of the default window background.
     func canvasList() -> some View {
         scrollContentBackground(.hidden).background(Theme.canvas)
+    }
+}
+
+extension View {
+    /// Flat style: a toolbar control drawn as a solid rounded chip with a hairline border.
+    func chip() -> some View {
+        menuStyle(.button).buttonStyle(ChipButtonStyle())
+    }
+}
+
+/// The flat style's buttons: solid fill, hairline border, 9pt corners, like the GitOS website.
+struct ChipButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .frame(height: 30)
+            .background(configuration.isPressed ? Theme.chipBorder : Theme.chip, in: RoundedRectangle(cornerRadius: 9))
+            .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.chipBorder) }
+            .opacity(isEnabled ? 1 : 0.5)
+            .contentShape(RoundedRectangle(cornerRadius: 9))
+    }
+}
+
+/// The flat style's main action: solid accent, 9pt corners, dark text.
+struct FlatProminentButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .fontWeight(.medium)
+            .foregroundStyle(Theme.canvas)
+            .padding(.horizontal, 12)
+            .frame(minHeight: controlSize == .large ? 34 : 24)
+            .background(Theme.accent.opacity(configuration.isPressed ? 0.8 : 1), in: RoundedRectangle(cornerRadius: 9))
+            .opacity(isEnabled ? 1 : 0.45)
+            .contentShape(RoundedRectangle(cornerRadius: 9))
+    }
+}
+
+extension View {
+    /// `.borderedProminent`, or the flat style's solid accent button.
+    @ViewBuilder func prominentButton() -> some View {
+        if Theme.isFlat { buttonStyle(FlatProminentButtonStyle()) } else { buttonStyle(.borderedProminent) }
     }
 }
