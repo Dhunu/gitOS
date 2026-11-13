@@ -168,6 +168,7 @@ struct WorktreesView: View {
         }
         .sheet(isPresented: $showingAdd) {
             NewWorktreeSheet(model: model)
+                .flatPresentation()
         }
         .confirmationDialog("Remove worktree \(pendingRemoval?.name ?? "")?",
                             isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
@@ -231,16 +232,14 @@ private struct NewWorktreeSheet: View {
             path = repo.deletingLastPathComponent().appendingPathComponent("\(repo.lastPathComponent)-\(safe)").path
         }
         .onChange(of: createBranch) { branch = "" }
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Create") {
-                    let (path, branch, create) = (path, branch.trimmingCharacters(in: .whitespaces), createBranch)
-                    Task { await model.addWorktree(path: path, branch: branch, newBranch: create) }
-                    dismiss()
-                }
-                .disabled(branch.trimmingCharacters(in: .whitespaces).isEmpty || path.isEmpty)
+        .sheetActions(cancel: { dismiss() }) {
+            Button("Create") {
+                let (path, branch, create) = (path, branch.trimmingCharacters(in: .whitespaces), createBranch)
+                Task { await model.addWorktree(path: path, branch: branch, newBranch: create) }
+                dismiss()
             }
+            .disabled(branch.trimmingCharacters(in: .whitespaces).isEmpty || path.isEmpty)
+            .prominentButton()
         }
     }
 

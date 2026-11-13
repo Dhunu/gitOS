@@ -39,10 +39,8 @@ private struct GeneralSettings: View {
             }
 
             Section("Appearance") {
-                Picker("Window style", selection: $app.preferences.windowStyle) {
-                    ForEach(WindowStyle.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
+                SegmentedControl(title: "Window style", selection: $app.preferences.windowStyle,
+                                 options: WindowStyle.allCases.map { ($0, $0.title) })
                 Text("Glass uses macOS's translucent sidebar and toolbar. Flat uses solid panels, like the GitOS website.")
                     .font(.caption).foregroundStyle(.secondary)
                 ThemePicker(selection: $app.preferences.themeID)
@@ -162,6 +160,7 @@ private struct AccountsSettings: View {
         }
         .sheet(isPresented: $showingSignIn) {
             SignInSheet { selection = $0.id }
+                .flatPresentation()
         }
         .confirmationDialog("Remove \(pendingRemoval?.title ?? "")?",
                             isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
@@ -339,11 +338,13 @@ struct SignInSheet: View {
                     Button("Use a Token…") { phase = .token }
                     Button("Sign in with Browser") { start() }
                         .keyboardShortcut(.defaultAction)
+                        .prominentButton()
                         .disabled(app.githubClientID.isEmpty)
                 case .token:
                     Button("Use Browser Instead") { phase = .intro }
                     Button("Add Account") { signInWithToken() }
                         .keyboardShortcut(.defaultAction)
+                        .prominentButton()
                         .disabled(trimmedToken.isEmpty)
                 default:
                     EmptyView()

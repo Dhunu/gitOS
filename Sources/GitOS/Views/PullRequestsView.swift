@@ -29,6 +29,7 @@ struct PullRequestsView: View {
             .task { await model.loadGitHub() }
             .sheet(isPresented: $showingCreate) {
                 CreatePullRequestSheet(model: model) { selection = $0.number }
+                    .flatPresentation()
             }
         }
     }
@@ -297,14 +298,12 @@ struct CreatePullRequestSheet: View {
         .formStyle(.grouped)
         .frame(width: 560, height: 520)
         .navigationTitle("New Pull Request")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                HStack {
-                    if let working { ProgressView().controlSize(.small); Text(working).foregroundStyle(.secondary) }
-                    Button(Account.titled(draft ? "Create Draft" : "Create Pull Request", as: model.resolved.account?.login)) { Task { await create() } }
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || base.isEmpty || working != nil)
-                }
+        .sheetActions(cancel: { dismiss() }) {
+            HStack {
+                if let working { ProgressView().controlSize(.small); Text(working).foregroundStyle(.secondary) }
+                Button(Account.titled(draft ? "Create Draft" : "Create Pull Request", as: model.resolved.account?.login)) { Task { await create() } }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || base.isEmpty || working != nil)
+                    .prominentButton()
             }
         }
         .task {

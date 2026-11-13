@@ -61,6 +61,7 @@ struct TriageList: View {
             CloseWithCommentSheet(model: model, request: request) { closedAll in
                 if closedAll { checked = [] }
             }
+                .flatPresentation()
         }
     }
 

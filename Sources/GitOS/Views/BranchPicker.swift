@@ -57,6 +57,7 @@ struct BranchPicker: View {
                 isOpen = false
                 onNewBranch()
             })
+                .flatPresentation()
         }
     }
 }

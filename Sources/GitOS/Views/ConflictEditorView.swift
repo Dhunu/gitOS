@@ -48,6 +48,7 @@ struct ConflictEditorView: View {
         .task(id: change.id) { load() }
         .sheet(item: Binding(get: { editing.map { EditTarget(id: $0) } }, set: { editing = $0?.id })) { target in
             customEditor(for: target.id)
+                .flatPresentation()
         }
     }
 
@@ -60,11 +61,8 @@ struct ConflictEditorView: View {
                 Toggle("Base", isOn: $showBase).toggleStyle(.checkbox)
                     .disabled(!conflicts.contains { $0.base != nil })
                     .help("Show the common ancestor (needs merge.conflictStyle=diff3 or zdiff3)")
-                Picker("", selection: $showResult) {
-                    Text("Conflicts").tag(false)
-                    Text("Result").tag(true)
-                }
-                .pickerStyle(.segmented)
+                SegmentedControl(title: "", selection: $showResult,
+                                 options: [(false, "Conflicts"), (true, "Result")])
                 .frame(width: 170)
             }
             Menu("Whole File") {
@@ -144,7 +142,7 @@ struct ConflictEditorView: View {
                 if let choose {
                     Button(chosen ? "Chosen" : "Use \(title)", action: choose)
                         .controlSize(.small)
-                        .buttonStyle(.bordered)
+                        .borderedButton()
                         .tint(chosen ? tint : nil)
                 }
             }
@@ -176,6 +174,7 @@ struct ConflictEditorView: View {
                     editing = nil
                 }
                 .keyboardShortcut(.defaultAction)
+                .prominentButton()
             }
         }
         .padding(16)
