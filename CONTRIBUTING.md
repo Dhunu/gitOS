@@ -10,7 +10,7 @@ Thanks for helping out. Bug reports, ideas and pull requests are all welcome.
 
 ## Set up
 
-You need macOS 27 or later on Apple Silicon, and Xcode with its command line tools.
+You need macOS 26 or later on Apple Silicon, and Xcode with its command line tools.
 
 ```bash
 git clone https://github.com/<your-username>/gitOS.git

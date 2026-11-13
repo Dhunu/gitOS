@@ -21,6 +21,7 @@ struct HistoryView: View {
             detail
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
         }
+        .sidebarInsetAsPadding()
         .sheet(item: Binding(
             get: { rebaseCommits.map { RebaseRequest(commits: $0) } },
             set: { if $0 == nil { rebaseCommits = nil } }

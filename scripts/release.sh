@@ -28,7 +28,7 @@ cat > build/appcast.xml <<XML
       <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
       <sparkle:version>$VERSION</sparkle:version>
       <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
       <sparkle:fullReleaseNotesLink>https://github.com/$REPO/releases/tag/$TAG</sparkle:fullReleaseNotesLink>
       <enclosure url="https://github.com/$REPO/releases/download/$TAG/GitOS-$VERSION.dmg" type="application/octet-stream" $SIGNATURE/>
     </item>

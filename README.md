@@ -1,6 +1,6 @@
 # GitOS
 
-A native macOS git client (SwiftUI, macOS 27+) in the spirit of GitHub Desktop, with
+A native macOS git client (SwiftUI, macOS 26+) in the spirit of GitHub Desktop, with
 **multiple GitHub accounts that switch automatically per folder or repo**.
 See [SPEC.md](SPEC.md) for decisions and the roadmap.
 
@@ -12,7 +12,7 @@ See [SPEC.md](SPEC.md) for decisions and the roadmap.
 Assets section of the release page. You don't need to clone this repo or install any developer tools
 beyond git.
 
-**Requirements:** macOS 27 or later on Apple Silicon (M-series; Intel Macs aren't supported), and git.
+**Requirements:** macOS 26 or later on Apple Silicon (M-series; Intel Macs aren't supported), and git.
 If you don't have git, run `xcode-select --install` in Terminal.
 
 **Or install with Homebrew:**

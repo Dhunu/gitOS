@@ -25,6 +25,8 @@ struct ContentView: View {
             if let repo = app.selectedRepo {
                 RepoView(model: RepoModel(ref: repo, app: app))
                     .id(repo.id)
+                    // macOS 26 adds the floating sidebar's width to the detail's minimum; drop it.
+                    .frame(minWidth: 0, maxWidth: .infinity)
             } else {
                 GitOSWelcome(title: "Welcome to GitOS", message: "Add a local git repository to get started.") {
                     HStack {
@@ -214,5 +216,18 @@ struct SummaryBadges: View {
             }
         }
         .font(.caption.monospacedDigit())
+    }
+}
+
+extension View {
+    /// On macOS 26 the detail column runs under the floating sidebar, and an HSplitView adds that
+    /// hidden strip to its panes' minimum widths, so narrower windows clip the panes. Turning the
+    /// inset into plain padding keeps it out of their minimums. A no-op on 27, where the inset is 0.
+    func sidebarInsetAsPadding() -> some View {
+        GeometryReader { proxy in
+            self
+                .padding(.leading, proxy.safeAreaInsets.leading)
+                .ignoresSafeArea(.container, edges: .leading)
+        }
     }
 }

@@ -25,6 +25,7 @@ struct PullRequestsView: View {
 
                 detail.frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
             }
+            .sidebarInsetAsPadding()
             .task { await model.loadGitHub() }
             .sheet(isPresented: $showingCreate) {
                 CreatePullRequestSheet(model: model) { selection = $0.number }

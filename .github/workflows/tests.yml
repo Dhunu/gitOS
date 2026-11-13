@@ -1,0 +1,18 @@
+# Runs the test suite on every pull request. The runner is macOS 26 (the oldest version GitOS
+# supports), so this also catches code that only works on macOS 27.
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 27
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)"
+      - name: macOS version
+        run: sw_vers
+      - run: swift test
