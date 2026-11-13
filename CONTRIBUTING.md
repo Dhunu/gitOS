@@ -34,7 +34,13 @@ GitOS uses a built-in GitHub sign-in, so there's nothing to configure. [SPEC.md]
 
 Every change reaches `main` through a pull request. A maintainer reviews it, and only maintainers can merge. Releases are also published by maintainers, so you don't need to change the version number.
 
-By contributing, you agree that your work is licensed under the [MIT License](LICENSE).
+GitOS is source-available under the [PolyForm Noncommercial License](LICENSE), with the code in
+`Sources/GitOS/ee/` under the [GitOS Commercial License](Sources/GitOS/ee/LICENSE). Because the
+author also sells commercial licenses, contributions need broader rights than those licenses
+give: by opening a pull request, you confirm that you wrote the change (or have the right to
+submit it), and you grant Angel Saikia a perpetual, worldwide, royalty-free, irrevocable license
+to use, change, sublicense and distribute your contribution under any license, including
+commercial ones. You keep the copyright in your contribution.
 
 ## Code of conduct
 

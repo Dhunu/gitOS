@@ -1,0 +1,36 @@
+The GitOS Commercial License (the "Commercial License")
+Copyright (c) 2026-present Angel Saikia
+
+This license applies to everything in the `Sources/GitOS/ee/` and `Tests/GitOSTests/ee/`
+directories of the GitOS repository (the "Software"). The rest of GitOS is licensed under
+the PolyForm Noncommercial License 1.0.0 in the LICENSE file at the root of the repository.
+
+1. Use. You may use the Software only while you (and any entity you represent) hold a valid
+   GitOS Pro, Lifetime or Team license or subscription from Angel Saikia (a "Commercial
+   Subscription") covering every person or Mac using it, and only within its terms.
+
+2. Development and testing. Without a Commercial Subscription, you may copy, build and
+   modify the Software for development and testing, including to propose changes to GitOS.
+   You may not use it for any other purpose without a Commercial Subscription.
+
+3. Modifications. You may modify the Software and publish patches to it. Angel Saikia keeps
+   all right, title and interest in the Software and in any such modifications and patches,
+   which may only be used under a valid Commercial Subscription.
+
+4. Restrictions. Except as allowed above, you may not copy, merge, publish, distribute,
+   sublicense, sell, rent, lend or host the Software, or any build that includes it, or
+   remove, disable or work around any license check in it.
+
+5. No other rights. No rights are granted beyond those stated here. Angel Saikia and any
+   licensors keep all other rights.
+
+6. Third-party components in the Software keep their own licenses.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL ANGEL SAIKIA OR ANY LICENSOR BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+To buy a Commercial Subscription, see https://gitos.angelsaikia.com.
