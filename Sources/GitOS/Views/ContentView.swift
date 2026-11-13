@@ -48,6 +48,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $app.showingClone) {
             CloneSheet()
+                .flatPresentation()
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { app.lastError != nil }, set: { if !$0 { app.lastError = nil } }

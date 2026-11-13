@@ -27,6 +27,7 @@ struct HistoryView: View {
             set: { if $0 == nil { rebaseCommits = nil } }
         )) { request in
             InteractiveRebaseSheet(model: model, commits: request.commits)
+                .flatPresentation()
         }
     }
 

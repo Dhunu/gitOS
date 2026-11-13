@@ -147,9 +147,11 @@ struct RepoView: View {
         }
         .sheet(isPresented: $model.showingAddRemote) {
             AddRemoteSheet(model: model)
+                .flatPresentation()
         }
         .sheet(isPresented: $showingTokenSignIn) {
             SignInSheet(startWithToken: true) { _ in Task { await model.fetch() } }
+                .flatPresentation()
         }
         .sheet(isPresented: $showingNewBranch) {
             NewBranchSheet(name: $newBranchName, base: model.status.branch) {
@@ -157,6 +159,7 @@ struct RepoView: View {
                 newBranchName = ""
                 Task { await model.createBranch(name) }
             }
+                .flatPresentation()
         }
     }
 
@@ -276,11 +279,9 @@ private struct NewBranchSheet: View {
         }
         .formStyle(.grouped)
         .frame(width: 380)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Create Branch", action: create).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
+        .sheetActions(cancel: { dismiss() }) {
+            Button("Create Branch", action: create).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .prominentButton()
         }
         .navigationTitle("New Branch")
     }
@@ -444,11 +445,8 @@ private struct AddRemoteSheet: View {
                 TextField("Name", text: $name)
                     .frame(maxWidth: 220)
                 Spacer()
-                Picker("Source", selection: $urlMode) {
-                    Text("From account").tag(false)
-                    Text("URL").tag(true)
-                }
-                .pickerStyle(.segmented)
+                SegmentedControl(title: "Source", selection: $urlMode,
+                                 options: [(false, "From account"), (true, "URL")])
                 .labelsHidden()
                 .frame(width: 200)
                 .disabled(account == nil)
@@ -479,6 +477,7 @@ private struct AddRemoteSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Add Remote", action: add)
                     .keyboardShortcut(.defaultAction)
+                    .prominentButton()
                     .disabled(trimmedName.isEmpty || chosenURL.isEmpty || adding)
             }
             .padding(12)
@@ -664,6 +663,7 @@ private struct ReconnectBanner: View {
         .background(Theme.panel)
         .sheet(isPresented: $showingSignIn) {
             SignInSheet { _ in }
+                .flatPresentation()
         }
     }
 }

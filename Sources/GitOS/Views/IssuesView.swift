@@ -36,6 +36,7 @@ struct IssuesView: View {
             .task { await model.loadGitHub() }
             .sheet(isPresented: $showingNew) {
                 NewIssueSheet(model: model) { selection = $0.number }
+                    .flatPresentation()
             }
         }
     }
@@ -155,24 +156,22 @@ private struct NewIssueSheet: View {
         .formStyle(.grouped)
         .frame(width: 520, height: 400)
         .navigationTitle("New Issue")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button(Account.titled("Create Issue", as: model.resolved.account?.login)) {
-                    working = true
-                    Task {
-                        do {
-                            let issue = try await model.createIssue(title: title, body: bodyText)
-                            onCreated(issue)
-                            dismiss()
-                        } catch {
-                            self.error = error.localizedDescription
-                        }
-                        working = false
+        .sheetActions(cancel: { dismiss() }) {
+            Button(Account.titled("Create Issue", as: model.resolved.account?.login)) {
+                working = true
+                Task {
+                    do {
+                        let issue = try await model.createIssue(title: title, body: bodyText)
+                        onCreated(issue)
+                        dismiss()
+                    } catch {
+                        self.error = error.localizedDescription
                     }
+                    working = false
                 }
-                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || working)
             }
+            .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || working)
+            .prominentButton()
         }
     }
 }

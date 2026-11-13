@@ -155,6 +155,23 @@ private struct ThemedWindow: ViewModifier {
             .preferredColorScheme(palette.scheme?.colorScheme)
             .containerBackground(Theme.solid ? AnyShapeStyle(Theme.panel) : AnyShapeStyle(.windowBackground),
                                  for: .window)
+            .modifier(FlatControls())
+    }
+}
+
+/// The flat style replaces macOS 26's glass buttons and menu buttons everywhere at once: views that
+/// don't pick a style themselves inherit these, sheets included. Explicit `.borderless` and `.plain` stay.
+private struct FlatControls: ViewModifier {
+    func body(content: Content) -> some View {
+        if Theme.isFlat {
+            content
+                .buttonStyle(ChipButtonStyle())
+                .menuStyle(.button)
+                // Forms and lists show the solid panel behind them instead of the system's grey.
+                .scrollContentBackground(.hidden)
+        } else {
+            content
+        }
     }
 }
 

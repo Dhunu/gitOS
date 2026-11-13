@@ -133,16 +133,26 @@ extension View {
 /// The flat style's buttons: solid fill, hairline border, 9pt corners, like the GitOS website.
 struct ChipButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .lineLimit(1)
-            .padding(.horizontal, 12)
-            .frame(height: 30)
+            .padding(.horizontal, controlSize == .small || controlSize == .mini ? 8 : 12)
+            .frame(height: Self.height(controlSize))
             .background(configuration.isPressed ? Theme.chipBorder : Theme.chip, in: RoundedRectangle(cornerRadius: 9))
             .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.chipBorder) }
             .opacity(isEnabled ? 1 : 0.5)
             .contentShape(RoundedRectangle(cornerRadius: 9))
+    }
+
+    static func height(_ size: ControlSize) -> CGFloat {
+        switch size {
+        case .mini: 18
+        case .small: 22
+        case .large, .extraLarge: 34
+        default: 30
+        }
     }
 }
 
@@ -156,7 +166,7 @@ struct FlatProminentButtonStyle: ButtonStyle {
             .fontWeight(.medium)
             .foregroundStyle(Theme.canvas)
             .padding(.horizontal, 12)
-            .frame(minHeight: controlSize == .large ? 34 : 24)
+            .frame(minHeight: ChipButtonStyle.height(controlSize))
             .background(Theme.accent.opacity(configuration.isPressed ? 0.8 : 1), in: RoundedRectangle(cornerRadius: 9))
             .opacity(isEnabled ? 1 : 0.45)
             .contentShape(RoundedRectangle(cornerRadius: 9))
@@ -164,8 +174,98 @@ struct FlatProminentButtonStyle: ButtonStyle {
 }
 
 extension View {
+    /// `.bordered`, or the flat style's chip.
+    @ViewBuilder func borderedButton() -> some View {
+        if Theme.isFlat { buttonStyle(ChipButtonStyle()) } else { buttonStyle(.bordered) }
+    }
+
+    /// Sheets and popovers are glass panels on macOS 26; the flat style makes them solid.
+    @ViewBuilder func flatPresentation() -> some View {
+        if Theme.isFlat {
+            scrollContentBackground(.hidden)
+                .background(Theme.panel)
+                .presentationBackground(Theme.panel)
+        } else {
+            self
+        }
+    }
+
     /// `.borderedProminent`, or the flat style's solid accent button.
     @ViewBuilder func prominentButton() -> some View {
         if Theme.isFlat { buttonStyle(FlatProminentButtonStyle()) } else { buttonStyle(.borderedProminent) }
+    }
+}
+
+/// A segmented control: the system one in the glass style, solid chips in the flat style.
+struct SegmentedControl<Value: Hashable>: View {
+    let title: String
+    @Binding var selection: Value
+    let options: [(value: Value, label: String)]
+
+    var body: some View {
+        if Theme.isFlat {
+            LabeledContent(title) {
+                HStack(spacing: 2) {
+                    ForEach(options.indices, id: \.self) { index in
+                        let option = options[index]
+                        let selected = option.value == selection
+                        Button { selection = option.value } label: {
+                            Text(option.label)
+                                .padding(.horizontal, 10)
+                                .frame(maxWidth: .infinity, minHeight: 22)
+                                .foregroundStyle(selected ? Theme.canvas : .primary)
+                                .background(selected ? Theme.accent : .clear, in: RoundedRectangle(cornerRadius: 7))
+                                .contentShape(RoundedRectangle(cornerRadius: 7))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                }
+                .padding(2)
+                .background(Theme.chip, in: RoundedRectangle(cornerRadius: 9))
+                .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.chipBorder) }
+                .fixedSize(horizontal: true, vertical: false)
+            }
+        } else {
+            Picker(title, selection: $selection) {
+                ForEach(options.indices, id: \.self) { Text(options[$0].label).tag(options[$0].value) }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+}
+
+extension View {
+    /// A sheet's Cancel and confirm buttons. The glass style puts them in the sheet's toolbar; the
+    /// flat style draws them in its own bar, because the system's sheet toolbar can't be made solid.
+    func sheetActions<Confirm: View>(cancel: @escaping () -> Void, @ViewBuilder confirm: () -> Confirm) -> some View {
+        modifier(SheetActions(cancel: cancel, confirm: confirm()))
+    }
+}
+
+private struct SheetActions<Confirm: View>: ViewModifier {
+    let cancel: () -> Void
+    let confirm: Confirm
+
+    func body(content: Content) -> some View {
+        if Theme.isFlat {
+            content.safeAreaInset(edge: .bottom, spacing: 0) {
+                HStack(spacing: 8) {
+                    Spacer()
+                    Button("Cancel", action: cancel).keyboardShortcut(.cancelAction)
+                    confirm.keyboardShortcut(.defaultAction)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .background(Theme.panel)
+                .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
+            }
+            // Every sheet using this sets its width; without this the bar's Spacer widens the sheet.
+            .fixedSize(horizontal: true, vertical: false)
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: cancel) }
+                ToolbarItem(placement: .confirmationAction) { confirm }
+            }
+        }
     }
 }

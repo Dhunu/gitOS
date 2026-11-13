@@ -61,6 +61,7 @@ struct InteractiveRebaseSheet: View {
                     Task { await model.interactiveRebase(steps: steps, base: base) }
                 }
                 .keyboardShortcut(.defaultAction)
+                .prominentButton()
                 .disabled(problem != nil || model.status.hasChanges || loading || steps.allSatisfy { $0.action == .pick } && steps.map(\.sha) == commits.map(\.sha))
             }
             .padding(16)

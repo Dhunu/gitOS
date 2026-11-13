@@ -34,11 +34,8 @@ struct CloneSheet: View {
                 }
                 .frame(maxWidth: 280)
                 Spacer()
-                Picker("Source", selection: $urlMode) {
-                    Text("From account").tag(false)
-                    Text("URL").tag(true)
-                }
-                .pickerStyle(.segmented)
+                SegmentedControl(title: "Source", selection: $urlMode,
+                                 options: [(false, "From account"), (true, "URL")])
                 .labelsHidden()
                 .frame(width: 200)
             }
@@ -75,6 +72,7 @@ struct CloneSheet: View {
                 if cloning { ProgressView().controlSize(.small) }
                 Button("Clone") { clone() }
                     .keyboardShortcut(.defaultAction)
+                    .prominentButton()
                     .disabled(chosenURL == nil || cloning)
             }
             .padding(12)
