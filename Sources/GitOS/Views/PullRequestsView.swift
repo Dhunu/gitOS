@@ -302,7 +302,7 @@ struct CreatePullRequestSheet: View {
             ToolbarItem(placement: .confirmationAction) {
                 HStack {
                     if let working { ProgressView().controlSize(.small); Text(working).foregroundStyle(.secondary) }
-                    Button(draft ? "Create Draft" : "Create Pull Request") { Task { await create() } }
+                    Button(Account.titled(draft ? "Create Draft" : "Create Pull Request", as: model.resolved.account?.login)) { Task { await create() } }
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || base.isEmpty || working != nil)
                 }
             }

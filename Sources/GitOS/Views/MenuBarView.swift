@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The menu bar extra: default account switcher plus a live status list of every repository.
+/// The menu bar extra: the default account plus a live status list of every repository.
 struct MenuBarView: View {
     @Environment(AppState.self) private var app
     @Environment(\.openWindow) private var openWindow
@@ -10,27 +10,13 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 GitOSMark(size: 22)
-                Menu {
-                    ForEach(app.accounts) { account in
-                        Button {
-                            app.defaultAccountID = account.id
-                        } label: {
-                            if app.defaultAccountID == account.id {
-                                Label(account.title, systemImage: "checkmark")
-                            } else {
-                                Text(account.title)
-                            }
-                        }
-                    }
-                    if app.accounts.isEmpty { Text("No accounts") }
-                } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(app.account(id: app.defaultAccountID)?.title ?? "No default account")
-                            .font(.headline)
-                        Text("Default account").font(.caption).foregroundStyle(.secondary)
-                    }
+                // Read-only: switching here silently changed every repo without a folder rule.
+                // The default is changed in Settings › Accounts.
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(app.account(id: app.defaultAccountID)?.title ?? "No default account")
+                        .font(.headline)
+                    Text("Default for repos without a rule").font(.caption).foregroundStyle(.secondary)
                 }
-                .menuStyle(.borderlessButton)
                 Spacer()
                 if let account = app.account(id: app.defaultAccountID) {
                     AvatarView(account: account, size: 22)

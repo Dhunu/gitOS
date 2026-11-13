@@ -246,6 +246,8 @@ struct CommitBox: View {
 
     @Bindable var model: RepoModel
     @FocusState private var focus: Field?
+    @State private var addingCoAuthor = false
+    @State private var newCoAuthor = ""
 
     var body: some View {
         VStack(spacing: 10) {
@@ -256,8 +258,6 @@ struct CommitBox: View {
                 if !model.coAuthors.isEmpty {
                     CoAuthorChips(model: model).padding(.horizontal, 12).padding(.bottom, 6)
                 }
-                Divider()
-                footer
             }
             .background(Theme.field, in: RoundedRectangle(cornerRadius: 10))
             .overlay {
@@ -268,15 +268,28 @@ struct CommitBox: View {
             Button {
                 Task { await model.commit() }
             } label: {
-                Text(commitTitle).lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity)
+                commitLabel.frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(commitBlocker != nil)
-            .help(commitBlocker ?? "Commit (⌘↩)")
+            .help(commitBlocker ?? identityHelp(model.resolved) + "\nCommit (⌘↩)")
         }
         .padding(12)
+        .alert("Add Co-author", isPresented: $addingCoAuthor) {
+            TextField("Name <email@example.com>", text: $newCoAuthor)
+            Button("Add") {
+                if let person = Person(parsing: newCoAuthor) {
+                    model.extraPeople.insert(person, at: 0)
+                    if !model.coAuthors.contains(person) { model.coAuthors.append(person) }
+                }
+                newCoAuthor = ""
+            }
+            Button("Cancel", role: .cancel) { newCoAuthor = "" }
+        } message: {
+            Text("Use their GitHub noreply email so the commit is credited to them.")
+        }
     }
 
     private var summaryField: some View {
@@ -293,6 +306,8 @@ struct CommitBox: View {
                     .foregroundStyle(isLong ? AnyShapeStyle(Theme.modified) : AnyShapeStyle(.tertiary))
                     .help(isLong ? "Summaries over \(Self.summaryLimit) characters get cut off in git logs and on GitHub" : "")
             }
+            aiButton
+            moreMenu
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
     }
@@ -322,70 +337,59 @@ struct CommitBox: View {
             .padding(.horizontal, 7).padding(.vertical, 8)
     }
 
-    private var footer: some View {
-        ViewThatFits(in: .horizontal) {
-            footerRow(compact: false)
-            footerRow(compact: true)
-        }
-        .font(.callout)
-        .padding(.horizontal, 12).padding(.vertical, 7)
-    }
-
-    /// Compact drops the labels so a narrow list column doesn't push the card wider.
-    private func footerRow(compact: Bool) -> some View {
-        HStack(spacing: 12) {
-            aiButton(compact: compact)
-            reviewButton(compact: compact)
-            CoAuthorMenu(model: model, compact: compact)
-            Spacer(minLength: 8)
-            commitIdentity(compact: compact)
-        }
-    }
-
-    /// Reviews what the commit would contain; findings appear under the diff.
-    private func reviewButton(compact: Bool) -> some View {
-        let provider = model.app.preferences.aiProvider
-        let running = model.reviewState.running.contains(.workingTree)
-        return Button {
-            Task { await model.runReview(.workingTree) }
-        } label: {
-            if running {
-                HStack(spacing: 5) {
-                    ProgressView().controlSize(.mini)
-                    Text("Reviewing…")
-                }
-            } else {
-                Label(compact ? "Review" : "Review Changes", systemImage: "text.badge.checkmark")
-            }
-        }
-        .buttonStyle(.borderless)
-        .fixedSize()
-        .disabled(running || !model.status.hasChanges || !provider.isReady)
-        .help(!provider.isReady ? "Add an Anthropic API key in Settings › AI"
-              : !model.status.hasChanges ? "No local changes to review"
-              : "Review the staged changes (or everything, when nothing is staged) before committing. Advisory only.")
-    }
-
-    private func aiButton(compact: Bool) -> some View {
+    /// Writes the message from the staged changes. Icon only: it's a helper, not the main action.
+    private var aiButton: some View {
         let provider = model.app.preferences.aiProvider
         let hasMessage = !model.summary.isEmpty || !model.details.isEmpty
         return Button {
             Task { await model.generateCommitMessage() }
         } label: {
             if model.generatingMessage {
-                HStack(spacing: 5) {
-                    ProgressView().controlSize(.mini)
-                    Text("Writing…")
-                }
+                ProgressView().controlSize(.mini)
             } else {
-                Label(compact ? "AI" : hasMessage ? "Rewrite with AI" : "Write with AI", systemImage: "sparkles")
+                Image(systemName: "sparkles")
             }
         }
         .buttonStyle(.borderless)
-        .fixedSize()
         .disabled(model.generatingMessage || model.status.staged.isEmpty || !provider.isReady)
         .help(aiHelp(provider))
+        .accessibilityLabel(hasMessage ? "Rewrite with AI" : "Write with AI")
         .keyboardShortcut("g", modifiers: [.command, .shift])
+    }
+
+    /// The less common commit tools, kept out of the way until needed.
+    private var moreMenu: some View {
+        let provider = model.app.preferences.aiProvider
+        let reviewing = model.reviewState.running.contains(.workingTree)
+        return Menu {
+            Button {
+                Task { await model.runReview(.workingTree) }
+            } label: {
+                Label(reviewing ? "Reviewing…" : "Review Changes", systemImage: "text.badge.checkmark")
+            }
+            .disabled(reviewing || !model.status.hasChanges || !provider.isReady)
+            if !provider.isReady {
+                Text("Add an Anthropic API key in Settings › AI to review")
+            }
+            Divider()
+            Menu {
+                CoAuthorItems(model: model) { addingCoAuthor = true }
+            } label: {
+                Label(model.coAuthors.isEmpty ? "Co-authors" : "Co-authors (\(model.coAuthors.count))", systemImage: "person.2")
+            }
+        } label: {
+            if reviewing {
+                ProgressView().controlSize(.mini)
+            } else {
+                Image(systemName: "ellipsis.circle")
+            }
+        }
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Review changes, add co-authors")
+        .accessibilityLabel("More commit options")
     }
 
     private func aiHelp(_ provider: AIProvider) -> String {
@@ -394,27 +398,29 @@ struct CommitBox: View {
         return "Write the message from the staged changes with \(provider.name) (⌘⇧G)"
     }
 
-    private func commitIdentity(compact: Bool) -> some View {
-        let resolved = model.resolved
-        return HStack(spacing: 5) {
-            if let account = resolved.account {
+    /// "[avatar] Commit 3 files as @login": who commits is part of the action, not a footnote.
+    /// Falls back to shorter titles when the column is narrow.
+    private var commitLabel: some View {
+        let account = model.resolved.account
+        let titles = CommitButtonTitle.variants(
+            staged: model.status.staged.count, hasChanges: model.status.hasChanges, login: account?.login
+        )
+        return HStack(spacing: 6) {
+            if let account, !model.status.staged.isEmpty {
                 AvatarView(account: account, size: 16)
-                if !compact { Text(account.commitName).lineLimit(1) }
-                if account.signing?.key.isEmpty == false {
-                    Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.added)
-                }
-            } else {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.modified)
-                if !compact { Text("Global git identity").lineLimit(1) }
+            } else if account == nil, !model.status.staged.isEmpty {
+                Image(systemName: "exclamationmark.triangle.fill")
+            }
+            ViewThatFits(in: .horizontal) {
+                ForEach(titles, id: \.self) { Text($0).lineLimit(1) }
             }
         }
-        .foregroundStyle(.secondary)
-        .help(identityHelp(resolved))
     }
 
     private func identityHelp(_ resolved: ResolvedAccount) -> String {
         guard let account = resolved.account else { return resolved.explanation }
-        return "\(account.commitName) <\(account.commitEmail)>\n\(resolved.explanation)"
+        let signing = account.signing.flatMap { $0.key.isEmpty ? nil : "\nSigned with \($0.format.title)" } ?? ""
+        return "\(account.commitName) <\(account.commitEmail)>\n\(resolved.explanation)\(signing)"
     }
 
     /// Why the commit button is off, or nil when it's ready.
@@ -426,66 +432,40 @@ struct CommitBox: View {
         return nil
     }
 
-    private var commitTitle: String {
-        let count = model.status.staged.count
-        if count == 0 { return model.status.hasChanges ? "Stage changes to commit" : "Nothing to commit" }
-        let files = count == 1 ? "1 file" : "\(count) files"
-        return "Commit \(files) to \(model.status.branch ?? "HEAD")"
+}
+
+/// Titles for the commit button, longest first; the view shows the first that fits.
+enum CommitButtonTitle {
+    static func variants(staged: Int, hasChanges: Bool, login: String?) -> [String] {
+        guard staged > 0 else { return [hasChanges ? "Stage changes to commit" : "Nothing to commit"] }
+        let files = staged == 1 ? "1 file" : "\(staged) files"
+        guard let login else { return ["Commit \(files) with global git identity", "Commit \(files)", "Commit"] }
+        return ["Commit \(files) as @\(login)", "Commit as @\(login)", "Commit"]
     }
 }
 
-private struct CoAuthorMenu: View {
+/// Recent authors to toggle as co-authors, plus a way to add someone new.
+private struct CoAuthorItems: View {
     @Bindable var model: RepoModel
-    var compact = false
-    @State private var adding = false
-    @State private var newPerson = ""
+    let addSomeone: () -> Void
 
     var body: some View {
-        Menu {
-            let people = model.knownPeople.prefix(30)
-            if people.isEmpty {
-                Text("No recent authors")
-            }
-            ForEach(Array(people)) { person in
-                Toggle(isOn: Binding(
-                    get: { model.coAuthors.contains(person) },
-                    set: { on in
-                        if on { model.coAuthors.append(person) } else { model.coAuthors.removeAll { $0 == person } }
-                    }
-                )) {
-                    Text("\(person.name) <\(person.email)>")
+        let people = model.knownPeople.prefix(30)
+        if people.isEmpty {
+            Text("No recent authors")
+        }
+        ForEach(Array(people)) { person in
+            Toggle(isOn: Binding(
+                get: { model.coAuthors.contains(person) },
+                set: { on in
+                    if on { model.coAuthors.append(person) } else { model.coAuthors.removeAll { $0 == person } }
                 }
+            )) {
+                Text("\(person.name) <\(person.email)>")
             }
-            Divider()
-            Button("Add Someone Else…") { adding = true }
-        } label: {
-            Label(coAuthorsLabel, systemImage: "person.2")
         }
-        .menuStyle(.button)
-        .buttonStyle(.borderless)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("Add Co-authored-by trailers")
-        .alert("Add Co-author", isPresented: $adding) {
-        TextField("Name <email@example.com>", text: $newPerson)
-        Button("Add") {
-            if let person = Person(parsing: newPerson) {
-                model.extraPeople.insert(person, at: 0)
-                if !model.coAuthors.contains(person) { model.coAuthors.append(person) }
-            }
-            newPerson = ""
-        }
-        Button("Cancel", role: .cancel) { newPerson = "" }
-    } message: {
-        Text("Use their GitHub noreply email so the commit is credited to them.")
-    }
-    }
-}
-
-private extension CoAuthorMenu {
-    var coAuthorsLabel: String {
-        if !model.coAuthors.isEmpty { return "\(model.coAuthors.count)" }
-        return compact ? "" : "Co-authors"
+        Divider()
+        Button("Add Someone Else…", action: addSomeone)
     }
 }
 

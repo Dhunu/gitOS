@@ -228,7 +228,7 @@ struct CloseWithCommentSheet: View {
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }.disabled(working)
-                Button(working ? "Closing…" : "Comment and Close") { Task { await close() } }
+                Button(working ? "Closing…" : Account.titled("Comment and Close", as: model.resolved.account?.login)) { Task { await close() } }
                     .buttonStyle(.borderedProminent)
                     .disabled(working)
             }

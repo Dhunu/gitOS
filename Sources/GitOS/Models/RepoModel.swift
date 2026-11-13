@@ -56,6 +56,21 @@ final class RepoModel {
     var errorMessage: String?
     var showingAddRemote = false
     var pushWarning: PushWarning?
+    /// A short confirmation shown after an action succeeds, e.g. which account a push went out as.
+    var notice: Notice?
+
+    struct Notice: Identifiable, Equatable {
+        let id = UUID()
+        let title: String
+        let detail: String
+
+        static func pushed(branch: String?, remote: String, account: Account?) -> Notice {
+            Notice(
+                title: "Pushed \(branch ?? "HEAD") to \(remote)",
+                detail: account.map { "as @\($0.login) · \($0.commitEmail)" } ?? "using your global git credentials"
+            )
+        }
+    }
 
     struct PushWarning: Identifiable {
         let id = UUID()
@@ -151,12 +166,16 @@ final class RepoModel {
 
     // MARK: Actions
 
-    func perform(_ label: String, _ work: () async throws -> Void) async {
+    /// Runs a git action with a busy label. Returns whether it succeeded; failures are already shown to the user.
+    @discardableResult
+    func perform(_ label: String, _ work: () async throws -> Void) async -> Bool {
         activity = label
         defer { activity = nil }
+        var succeeded = true
         do {
             try await work()
         } catch {
+            succeeded = false
             // A refused sign-in gets the Reconnect banner instead of git's raw error.
             if !app.noteRejectedSignIn(error, for: ref) {
                 errorMessage = app.message(for: error, repo: ref, owner: primaryRemote?.owner)
@@ -165,6 +184,7 @@ final class RepoModel {
             }
         }
         await refresh()
+        return succeeded
     }
 
     func toggleStage(_ change: FileChange) async {
@@ -388,9 +408,12 @@ final class RepoModel {
         let context = app.gitContext(for: ref)
         let remote = primaryRemote?.name ?? "origin"
         let needsUpstream = status.upstream == nil
-        await perform("Pushing") {
+        let branch = status.branch
+        let account = resolved.account
+        let pushed = await perform("Pushing") {
             try await repo.push(remote: remote, setUpstream: needsUpstream, context: context)
         }
+        if pushed { notice = .pushed(branch: branch, remote: remote, account: account) }
         await loadGitHub(force: true)
     }
 

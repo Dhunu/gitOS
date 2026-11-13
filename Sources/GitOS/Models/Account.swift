@@ -31,6 +31,22 @@ struct Account: Codable, Identifiable, Hashable, Sendable {
     var title: String { label.isEmpty ? "@\(login)" : "\(label) · @\(login)" }
     var noreplyEmail: String { "\(githubID)+\(login)@users.noreply.github.com" }
 
+    /// One letter that tells this account apart from the others: its label ("Work" → W), else its login.
+    var badgeInitial: String {
+        let source = label.trimmingCharacters(in: .whitespaces).isEmpty ? login : label
+        return String(source.prefix(1)).uppercased()
+    }
+
+    /// Position used to pick a distinct badge colour; stable while the account list doesn't change.
+    static func badgeIndex(of id: Account.ID, in accounts: [Account]) -> Int {
+        accounts.firstIndex { $0.id == id } ?? 0
+    }
+
+    /// Names who an action that writes to GitHub runs as, e.g. "Create Pull Request as @maya".
+    static func titled(_ action: String, as login: String?) -> String {
+        login.map { "\(action) as @\($0)" } ?? action
+    }
+
     func owns(email: String) -> Bool {
         let email = email.lowercased()
         return email == commitEmail.lowercased() || knownEmails.contains { $0.lowercased() == email }
