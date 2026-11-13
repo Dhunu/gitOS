@@ -124,6 +124,20 @@ struct ThemePalette: Identifiable, Sendable, Hashable {
 final class ThemeStore: @unchecked Sendable {
     static let shared = ThemeStore()
     var palette = ThemePalette.gitOS
+    var style = WindowStyle.glass
+
+    func apply(_ preferences: Preferences) {
+        palette = .named(preferences.themeID)
+        style = preferences.windowStyle
+    }
+}
+
+/// How the window is drawn: macOS's translucent Liquid Glass, or solid panels with hairline
+/// borders, as on the GitOS website.
+enum WindowStyle: String, Codable, CaseIterable, Sendable {
+    case glass, flat
+
+    var title: String { self == .glass ? "Glass" : "Flat" }
 }
 
 extension View {
@@ -139,7 +153,7 @@ private struct ThemedWindow: ViewModifier {
         content
             .tint(Theme.accent)
             .preferredColorScheme(palette.scheme?.colorScheme)
-            .containerBackground(palette.isCustom ? AnyShapeStyle(Theme.panel) : AnyShapeStyle(.windowBackground),
+            .containerBackground(Theme.solid ? AnyShapeStyle(Theme.panel) : AnyShapeStyle(.windowBackground),
                                  for: .window)
     }
 }

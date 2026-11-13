@@ -149,10 +149,10 @@ struct OperationBanner: View {
             // The prominent button is always the next step: resolve, then continue.
             if conflicts > 0 {
                 Button("Resolve Conflicts…", action: onResolve)
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
             } else {
                 Button("Continue") { Task { await model.continueOperation() } }
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
             }
         }
         .disabled(model.isBusy)

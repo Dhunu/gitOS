@@ -93,7 +93,7 @@ struct StashesView: View {
                     Group {
                         Button("Apply") { Task { await model.applyStash(stash, pop: false) } }
                         Button("Pop") { Task { await model.applyStash(stash, pop: true) } }
-                            .buttonStyle(.borderedProminent)
+                            .prominentButton()
                     }
                     .disabled(model.isBusy)
                     FocusModeButton()

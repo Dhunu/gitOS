@@ -32,6 +32,7 @@ struct RepoView: View {
             // gets the whole window. The operation banner stays: a merge or rebase
             // in progress is too important to hide.
             if !focusMode.wrappedValue {
+                if Theme.isFlat { flatHeader }
                 RepoTabBar(selection: $tab, count: count(for:))
                 Divider()
                 if model.app.hasRejectedSignIn(for: model.ref), let account = model.resolved.account {
@@ -68,6 +69,7 @@ struct RepoView: View {
                 RepoStatusBar(model: model)
             }
         }
+        .ignoresSafeArea(.container, edges: Theme.isFlat ? .top : [])
         .background(Theme.canvas)
         .overlay(alignment: .bottomTrailing) {
             if let notice = model.notice {
@@ -85,26 +87,13 @@ struct RepoView: View {
         .navigationTitle(model.ref.name)
         .navigationSubtitle(model.status.branch ?? "detached HEAD")
         .toolbar {
-            ToolbarItem { AccountMenu(model: model) }
-            ToolbarItem { BranchPicker(model: model) { showingNewBranch = true } }
-            ToolbarItem {
-                if let checks = model.headChecks, checks.state != .none {
-                    Menu {
-                        ForEach(Array(checks.items.enumerated()), id: \.offset) { _, item in
-                            Button {
-                                if let url = item.url { NSWorkspace.shared.open(url) }
-                            } label: {
-                                Label(item.name, systemImage: item.state == .success ? "checkmark.circle"
-                                      : item.state == .failure ? "xmark.circle" : "clock")
-                            }
-                        }
-                    } label: {
-                        ChecksBadge(checks: checks)
-                    }
-                    .help("Checks on \(model.status.branch ?? "HEAD"): \(checks.description)")
-                }
+            // The flat style draws these in its own header instead (see `flatHeader`).
+            if !Theme.isFlat {
+                ToolbarItem { AccountMenu(model: model) }
+                ToolbarItem { BranchPicker(model: model) { showingNewBranch = true } }
+                ToolbarItem { checksMenu }
+                ToolbarItem { syncButton }
             }
-            ToolbarItem { syncButton }
         }
         .task {
             await model.refresh()
@@ -169,6 +158,42 @@ struct RepoView: View {
                 Task { await model.createBranch(name) }
             }
         }
+    }
+
+    @ViewBuilder private var checksMenu: some View {
+        if let checks = model.headChecks, checks.state != .none {
+            Menu {
+                ForEach(Array(checks.items.enumerated()), id: \.offset) { _, item in
+                    Button {
+                        if let url = item.url { NSWorkspace.shared.open(url) }
+                    } label: {
+                        Label(item.name, systemImage: item.state == .success ? "checkmark.circle"
+                              : item.state == .failure ? "xmark.circle" : "clock")
+                    }
+                }
+            } label: {
+                ChecksBadge(checks: checks)
+            }
+            .help("Checks on \(model.status.branch ?? "HEAD"): \(checks.description)")
+        }
+    }
+
+    /// The flat style's stand-in for the window toolbar: the repository's name and branch,
+    /// then the same controls drawn as solid chips.
+    private var flatHeader: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(model.ref.name).font(.system(size: 15, weight: .semibold))
+                Text(model.status.branch ?? "detached HEAD").font(.caption).foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            Spacer(minLength: 8)
+            AccountMenu(model: model).chip()
+            BranchPicker(model: model) { showingNewBranch = true }.chip()
+            checksMenu.chip()
+            syncButton.chip()
+        }
+        .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
     }
 
     private func count(for tab: Tab) -> Int {
@@ -312,8 +337,14 @@ struct AccountMenu: View {
         } label: {
             HStack(spacing: 6) {
                 if let account = resolved.account {
-                    // Toolbar menu labels ignore frame/clipShape, so the image must already be 18pt and round.
-                    if let avatar { Image(nsImage: avatar) } else { Image(systemName: "person.crop.circle") }
+                    if Theme.isFlat {
+                        AvatarView(account: account, size: 18)
+                    } else if let avatar {
+                        // Toolbar menu labels ignore frame/clipShape, so the image must already be 18pt and round.
+                        Image(nsImage: avatar)
+                    } else {
+                        Image(systemName: "person.crop.circle")
+                    }
                     Text(account.login)
                 } else {
                     Image(systemName: "person.crop.circle.badge.questionmark")
@@ -360,9 +391,9 @@ struct AvatarView: View {
             let tint = Theme.lanes[Account.badgeIndex(of: account.id, in: app?.accounts ?? [account]) % Theme.lanes.count]
             Text(account.badgeInitial)
                 .font(.system(size: size * 0.5, weight: .semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(Theme.isFlat ? Theme.canvas : tint)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(tint.opacity(0.22))
+                .background(tint.opacity(Theme.isFlat ? 1 : 0.22))
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
@@ -384,7 +415,7 @@ struct GitHubUnavailableView: View {
         } actions: {
             if model.remotes.isEmpty {
                 Button("Add Remote…") { model.showingAddRemote = true }
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
             }
         }
     }
@@ -483,7 +514,7 @@ private struct RepoTabBar: View {
     @Namespace private var underline
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: Theme.isFlat ? 22 : 2) {
             ForEach(RepoView.Tab.allCases, id: \.self) { tab in
                 Button {
                     withAnimation(.snappy(duration: 0.2)) { selection = tab }
@@ -494,15 +525,15 @@ private struct RepoTabBar: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
-        .background(Theme.panel)
+        .padding(.horizontal, Theme.isFlat ? 16 : 8)
+        .background(Theme.isFlat ? Theme.canvas : Theme.panel)
     }
 
     private func label(for tab: RepoView.Tab) -> some View {
         let selected = tab == selection
         return HStack(spacing: 5) {
-            Image(systemName: tab.icon).font(.caption)
-            Text(tab.rawValue).font(.callout.weight(selected ? .semibold : .regular))
+            if !Theme.isFlat { Image(systemName: tab.icon).font(.caption) }
+            Text(tab.rawValue).font(Theme.isFlat ? .body : .callout.weight(selected ? .semibold : .regular))
             if count(tab) > 0 {
                 Text("\(count(tab))")
                     .font(.caption2.monospacedDigit().weight(.medium))
@@ -512,8 +543,8 @@ private struct RepoTabBar: View {
         }
         .lineLimit(1)
         .foregroundStyle(selected ? Theme.accent : .secondary)
-        .padding(.horizontal, 10)
-        .frame(height: 34)
+        .padding(.horizontal, Theme.isFlat ? 0 : 10)
+        .frame(height: Theme.isFlat ? 37 : 34)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) {
             if selected {
@@ -563,9 +594,9 @@ private struct RepoStatusBar: View {
         .font(.caption.monospaced())
         .foregroundStyle(.secondary)
         .lineLimit(1)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Theme.isFlat ? 16 : 12)
         .frame(height: 24)
-        .background(Theme.panel)
+        .background(Theme.isFlat ? Theme.canvas : Theme.panel)
     }
 }
 
@@ -653,7 +684,8 @@ private struct NoticeToast: View {
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .background(Theme.isFlat ? AnyShapeStyle(Theme.panel) : AnyShapeStyle(.regularMaterial),
+                    in: RoundedRectangle(cornerRadius: 12))
         .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.added.opacity(0.45)) }
         .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
         .accessibilityElement(children: .combine)

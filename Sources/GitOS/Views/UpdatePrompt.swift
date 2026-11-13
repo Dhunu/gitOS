@@ -14,7 +14,7 @@ struct UpdatePrompt: View {
             }
             HStack(spacing: 8) {
                 Button("Restart to Update") { updater.installAndRestart() }
-                    .buttonStyle(.borderedProminent)
+                    .prominentButton()
                     .controlSize(.small)
                 Button("Later") { updater.isPromptHidden = true }
                     .buttonStyle(.borderless)

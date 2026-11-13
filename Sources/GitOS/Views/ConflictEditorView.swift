@@ -92,7 +92,7 @@ struct ConflictEditorView: View {
             }
             Spacer()
             Button("Save & Mark Resolved") { Task { await save() } }
-                .buttonStyle(.borderedProminent)
+                .prominentButton()
                 .disabled(conflicts.isEmpty || (resultOverride == nil && resolvedCount < conflicts.count) || model.isBusy)
         }
         .padding(10)

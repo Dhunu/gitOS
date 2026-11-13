@@ -17,7 +17,7 @@ struct ChangesView: View {
                     fileList
                     Divider()
                     CommitBox(model: model)
-                        .background(Theme.panel)
+                        .background(Theme.isFlat ? Theme.canvas : Theme.panel)
                 }
                 .frame(minWidth: 280, idealWidth: 340, maxWidth: 520)
             }
@@ -153,7 +153,7 @@ struct ChangesView: View {
                     FocusModeButton()
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(Theme.panel)
+                .background(Theme.isFlat ? Theme.canvas : Theme.panel)
                 Divider()
                 if let diff = model.currentDiff {
                     ScrollView {
@@ -196,6 +196,41 @@ struct FileChangeRow: View {
     @State private var hovering = false
 
     var body: some View {
+        if Theme.isFlat { flatBody } else { glassBody }
+    }
+
+    /// Flat style, as on the GitOS website: a stage checkbox, the full path, the kind on the right.
+    private var flatBody: some View {
+        HStack(spacing: 9) {
+            if change.area != .conflicted {
+                Button(action: toggle) {
+                    let staged = change.area == .staged
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(staged ? Theme.canvas : .clear)
+                        .frame(width: 15, height: 15)
+                        .background(staged ? Theme.accent : .clear, in: RoundedRectangle(cornerRadius: 4))
+                        .overlay { RoundedRectangle(cornerRadius: 4).strokeBorder(staged ? .clear : Theme.chipBorder) }
+                }
+                .buttonStyle(.plain)
+                .help(change.area == .staged ? "Unstage" : "Stage")
+                .accessibilityLabel(change.area == .staged ? "Unstage \(change.path)" : "Stage \(change.path)")
+            }
+            Text(change.path)
+                .font(.system(size: 12, design: .monospaced))
+                .lineLimit(1).truncationMode(.head)
+            Spacer(minLength: 0)
+            Text(change.kind.letter)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(change.kind.color)
+                .padding(.horizontal, 5).padding(.vertical, 1)
+                .background(change.kind.color.opacity(0.14), in: RoundedRectangle(cornerRadius: 4))
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2, perform: toggle)
+    }
+
+    private var glassBody: some View {
         HStack(spacing: 8) {
             Text(change.kind.letter)
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -259,9 +294,9 @@ struct CommitBox: View {
                     CoAuthorChips(model: model).padding(.horizontal, 12).padding(.bottom, 6)
                 }
             }
-            .background(Theme.field, in: RoundedRectangle(cornerRadius: 10))
+            .background(Theme.isFlat ? Theme.panel : Theme.field, in: RoundedRectangle(cornerRadius: Theme.isFlat ? 9 : 10))
             .overlay {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: Theme.isFlat ? 9 : 10)
                     .strokeBorder(focus == nil ? AnyShapeStyle(.separator) : AnyShapeStyle(Theme.accent), lineWidth: 1)
             }
 
@@ -270,7 +305,7 @@ struct CommitBox: View {
             } label: {
                 commitLabel.frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .prominentButton()
             .controlSize(.large)
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(commitBlocker != nil)
