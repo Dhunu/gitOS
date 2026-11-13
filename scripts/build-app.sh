@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # The release version. Sparkle compares this, so raise it for every release (scripts/release.sh does).
-VERSION="0.3.2"
+VERSION="0.4.0"
 # Sparkle only installs updates signed with the matching private key, kept in the login Keychain
 # under the account "gitos" (back it up: generate_keys --account gitos -x <file>).
 SPARKLE_PUBLIC_KEY="vecXhaUoRcEc19rFlXLvb6hyeN3Q0PrwQy/k3GOZcRU="
