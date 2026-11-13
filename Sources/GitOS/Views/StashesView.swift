@@ -23,6 +23,7 @@ struct StashesView: View {
             detail
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
         }
+        .sidebarInsetAsPadding()
         .alert("Stash Changes", isPresented: $showingStashPrompt) {
             TextField("Message (optional)", text: $stashMessage)
             Button("Stash") {

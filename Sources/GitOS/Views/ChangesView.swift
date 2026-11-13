@@ -26,6 +26,7 @@ struct ChangesView: View {
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
                 .safeAreaInset(edge: .bottom, spacing: 0) { reviewInset }
         }
+        .sidebarInsetAsPadding()
         .onChange(of: model.currentDiff) { lineSelection = [] }
         .confirmationDialog(
             "Discard changes to \(pendingDiscard?.fileName ?? "")?",

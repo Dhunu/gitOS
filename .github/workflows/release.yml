@@ -39,8 +39,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.merged == true &&
        !contains(github.event.pull_request.labels.*.name, 'release:skip'))
-    # The xcode-27 preview image is a macOS 26 host with the macOS 27 SDK: it can BUILD
-    # for macOS 27 but cannot RUN the app or its tests. Run `swift test` before merging.
+    # The xcode-27 preview image is a macOS 26 host with the macOS 27 SDK. Tests run in tests.yml.
     runs-on: xcode-27
     env:
       GH_TOKEN: ${{ github.token }}
@@ -112,7 +111,7 @@ jobs:
                 <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
                 <sparkle:version>$VERSION</sparkle:version>
                 <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
-                <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+                <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
                 <sparkle:fullReleaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/$TAG</sparkle:fullReleaseNotesLink>
                 <enclosure url="https://github.com/${{ github.repository }}/releases/download/$TAG/GitOS-$VERSION.dmg" type="application/octet-stream" $SIGNATURE/>
               </item>

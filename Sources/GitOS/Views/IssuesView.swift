@@ -32,6 +32,7 @@ struct IssuesView: View {
 
                 detail.frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
             }
+            .sidebarInsetAsPadding()
             .task { await model.loadGitHub() }
             .sheet(isPresented: $showingNew) {
                 NewIssueSheet(model: model) { selection = $0.number }

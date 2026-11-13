@@ -1,6 +1,6 @@
 # GitOS — spec
 
-A native macOS (SwiftUI, macOS 27+) git client modelled on GitHub Desktop, built around
+A native macOS (SwiftUI, macOS 26+) git client modelled on GitHub Desktop, built around
 **multiple GitHub accounts** that switch automatically per folder/repo.
 
 ## Decisions (from the kickoff Q&A, 2026-11-01)
@@ -10,7 +10,7 @@ A native macOS (SwiftUI, macOS 27+) git client modelled on GitHub Desktop, built
 | Account switching | Folder rules (`~/Work` → work account) + per-repo override + global default |
 | Hosts | GitHub.com |
 | Auth | Browser OAuth (GitHub device flow); tokens in the macOS Keychain |
-| macOS | 27+ only (latest SwiftUI, Liquid Glass) |
+| macOS | 26+ (Liquid Glass; 26 support added in 0.3.0, was 27+) |
 | Git engine | System `git` CLI, output parsed (`--porcelain=v2 -z`, custom `--format`) |
 | Power features | Commit graph, line/hunk staging, interactive rebase UI, stash & worktrees |
 | Conflicts | Built-in 3-way merge editor |
