@@ -258,6 +258,7 @@ private struct NewBranchSheet: View {
 struct AccountMenu: View {
     @Environment(AppState.self) private var app
     let model: RepoModel
+    @State private var avatar: NSImage?
 
     var body: some View {
         let resolved = model.resolved
@@ -298,7 +299,8 @@ struct AccountMenu: View {
         } label: {
             HStack(spacing: 6) {
                 if let account = resolved.account {
-                    AvatarView(account: account, size: 18)
+                    // Toolbar menu labels ignore frame/clipShape, so the image must already be 18pt and round.
+                    if let avatar { Image(nsImage: avatar) } else { Image(systemName: "person.crop.circle") }
                     Text(account.login)
                 } else {
                     Image(systemName: "person.crop.circle.badge.questionmark")
@@ -307,6 +309,18 @@ struct AccountMenu: View {
             }
         }
         .help(resolved.account.map { "\($0.title): \(resolved.explanation)" } ?? resolved.explanation)
+        .task(id: resolved.account?.avatarURL) { avatar = await Self.roundAvatar(resolved.account?.avatarURL) }
+    }
+
+    private static func roundAvatar(_ url: URL?, side: CGFloat = 18) async -> NSImage? {
+        guard let url = url.flatMap({ URL(string: $0.absoluteString + "&s=\(Int(side * 3))") }),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let source = NSImage(data: data) else { return nil }
+        return NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            NSBezierPath(ovalIn: rect).addClip()
+            source.draw(in: rect)
+            return true
+        }
     }
 
     /// Describes what "automatic" would resolve to without the override.
