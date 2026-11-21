@@ -111,7 +111,21 @@ build and change, under two licenses:
 | Code | License | In short |
 |---|---|---|
 | Everything outside `ee/` | [PolyForm Noncommercial 1.0.0](LICENSE) | Free for personal, noncommercial use, and for charities, schools and public bodies. |
-| [`Sources/GitOS/ee/`](Sources/GitOS/ee) (AI review, PR triage) | [GitOS Commercial License](Sources/GitOS/ee/LICENSE) | Needs a GitOS Pro license to use. Free to build and change for development and testing. |
+| [`Sources/GitOS/ee/`](Sources/GitOS/ee) (Pro features) | [GitOS Commercial License](Sources/GitOS/ee/LICENSE) | Needs a GitOS Pro license to use. Free to build and change for development and testing. |
+
+### Free and Pro
+
+| Free | Pro (30-day trial) |
+|---|---|
+| Changes, line and hunk staging, commits, co-authors | Unlimited GitHub accounts |
+| History, commit graph, branches, merge, fetch, pull, push | Pull requests, PR triage and CI checks |
+| Clone, stashes, SSH and GPG signing | Issues |
+| 2 GitHub accounts with folder rules | AI commit messages, PR descriptions and code review |
+| Conflicts: keep ours or theirs for the whole file | 3-way conflict editor, interactive rebase, worktrees |
+| GitOS theme, Glass and Flat, menu bar, `gitos` CLI | Every theme |
+
+Licenses are Polar license keys, entered in **Settings › License**. People who used GitOS before
+Pro existed get a 90-day trial.
 
 You need a commercial license from the author to:
 

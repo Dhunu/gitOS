@@ -126,8 +126,9 @@ final class ThemeStore: @unchecked Sendable {
     var palette = ThemePalette.gitOS
     var style = WindowStyle.glass
 
-    func apply(_ preferences: Preferences) {
-        palette = .named(preferences.themeID)
+    /// Themes other than GitOS are Pro; without it the saved choice is kept but not shown.
+    @MainActor func apply(_ preferences: Preferences) {
+        palette = Licensing.shared.isPro ? .named(preferences.themeID) : .gitOS
         style = preferences.windowStyle
     }
 }
@@ -180,14 +181,19 @@ struct ThemePicker: View {
     @Binding var selection: String
 
     var body: some View {
+        // Without Pro only the GitOS theme applies, whatever was saved.
+        let pro = Licensing.shared.isPro
+        let shown = pro ? selection : ThemePalette.gitOS.id
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 124), spacing: 10)], spacing: 10) {
             ForEach(ThemePalette.all) { palette in
-                Button { selection = palette.id } label: {
-                    ThemeCard(palette: palette, isSelected: palette.id == selection)
+                Button {
+                    if palette.id == ThemePalette.gitOS.id || Licensing.shared.require(.themes) { selection = palette.id }
+                } label: {
+                    ThemeCard(palette: palette, isSelected: palette.id == shown, locked: !pro && palette.isCustom)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(palette.name)
-                .accessibilityAddTraits(palette.id == selection ? .isSelected : [])
+                .accessibilityAddTraits(palette.id == shown ? .isSelected : [])
             }
         }
         .padding(.vertical, 4)
@@ -197,6 +203,7 @@ struct ThemePicker: View {
 private struct ThemeCard: View {
     let palette: ThemePalette
     let isSelected: Bool
+    var locked = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -224,6 +231,7 @@ private struct ThemeCard: View {
                 if isSelected {
                     Image(systemName: "checkmark").font(.caption2.weight(.bold)).foregroundStyle(Theme.accent)
                 }
+                if locked { ProBadge() }
             }
         }
         .contentShape(Rectangle())
