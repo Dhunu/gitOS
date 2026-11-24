@@ -181,8 +181,9 @@ struct OnboardingView: View {
 
     private var ready: some View {
         VStack(alignment: .leading, spacing: 16) {
-            header("sparkles", "You're ready", "Here's where to find help while you get going.")
+            header("sparkles", "You're ready", "Take a 1-minute tour of the window, or start using GitOS.")
             VStack(alignment: .leading, spacing: 8) {
+                point("hand.point.up.left", "The tour points at each part of the window and explains it. Run it again from Help › Take the Tour.")
                 point("book", "Help › GitOS Guide (⌘?) explains every feature in detail.")
                 point("keyboard", "⌘1–⌘6 switch tabs, ⌘↩ commits, ⇧⌘F gives a pane the whole window.")
             }
@@ -212,6 +213,7 @@ struct OnboardingView: View {
             }
             if page == .ready {
                 Button("Start Using GitOS") { finish(tour: false) }
+                Button("Take the Tour") { finish(tour: true) }
                     .keyboardShortcut(.defaultAction)
                     .prominentButton()
             } else {

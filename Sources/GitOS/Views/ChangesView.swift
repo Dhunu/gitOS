@@ -15,15 +15,18 @@ struct ChangesView: View {
             if !listHidden {
                 VStack(spacing: 0) {
                     fileList
+                        .tourStop(.changes)
                     Divider()
                     CommitBox(model: model)
                         .background(Theme.isFlat ? Theme.canvas : Theme.panel)
+                        .tourStop(.commit)
                 }
                 .frame(minWidth: 280, idealWidth: 340, maxWidth: 520)
             }
 
             diffPane
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                .tourStop(.diff)
                 .safeAreaInset(edge: .bottom, spacing: 0) { reviewInset }
         }
         .sidebarInsetAsPadding()

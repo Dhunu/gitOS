@@ -279,6 +279,11 @@ struct HelpCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("GitOS Guide") { openWindow(id: GuideWindow.id) }
                 .keyboardShortcut("?", modifiers: .command)
+            Button("Take the Tour") {
+                AppDelegate.showMainWindow()
+                Onboarding.shared.isPresented = false
+                Tour.shared.start(hasRepository: AppState.shared.selectedRepo != nil)
+            }
             Button("Welcome to GitOS…") {
                 AppDelegate.showMainWindow()
                 Onboarding.shared.isPresented = true

@@ -36,6 +36,7 @@ struct RepoView: View {
             if !focusMode.wrappedValue {
                 if Theme.isFlat { flatHeader }
                 RepoTabBar(selection: $tab, count: count(for:))
+                    .tourStop(.tabs)
                 Divider()
                 if model.app.hasRejectedSignIn(for: model.ref), let account = model.resolved.account {
                     ReconnectBanner(account: account)
@@ -91,10 +92,10 @@ struct RepoView: View {
         .toolbar {
             // The flat style draws these in its own header instead (see `flatHeader`).
             if !Theme.isFlat {
-                ToolbarItem { AccountMenu(model: model) }
-                ToolbarItem { BranchPicker(model: model) { showingNewBranch = true } }
+                ToolbarItem { AccountMenu(model: model).tourStop(.account) }
+                ToolbarItem { BranchPicker(model: model) { showingNewBranch = true }.tourStop(.branch) }
                 ToolbarItem { checksMenu }
-                ToolbarItem { syncButton }
+                ToolbarItem { syncButton.tourStop(.sync) }
             }
         }
         .task {
@@ -102,6 +103,14 @@ struct RepoView: View {
             await model.loadGitHub()
             guard !Task.isCancelled else { return }
             watcher = RepoWatcher(path: model.repo.url.path) { [model] in model.scheduleRefresh() }
+        }
+        .onChange(of: Tour.shared.step) {
+            // The tour shows the parts it points at: the right tab, and the tab bar out of focus mode.
+            guard let step = Tour.shared.step else { return }
+            if focusMode.wrappedValue { focusMode.wrappedValue = false }
+            if let required = step.requiredTab, tab != required {
+                withAnimation(.snappy(duration: 0.2)) { tab = required }
+            }
         }
         .onDisappear {
             watcher?.stop()
@@ -194,10 +203,10 @@ struct RepoView: View {
             }
             .lineLimit(1)
             Spacer(minLength: 8)
-            AccountMenu(model: model).chip()
-            BranchPicker(model: model) { showingNewBranch = true }.chip()
+            AccountMenu(model: model).chip().tourStop(.account)
+            BranchPicker(model: model) { showingNewBranch = true }.chip().tourStop(.branch)
             checksMenu.chip()
-            syncButton.chip()
+            syncButton.chip().tourStop(.sync)
         }
         .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
     }

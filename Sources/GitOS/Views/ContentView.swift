@@ -48,7 +48,9 @@ struct ContentView: View {
             if focusMode { focusBinding.wrappedValue = false }
         }
         .sheet(isPresented: $onboarding.isPresented) {
-            OnboardingView { _ in }
+            OnboardingView { startTour in
+                if startTour { Tour.shared.start(hasRepository: app.selectedRepo != nil) }
+            }
                 .environment(app)
                 .flatPresentation()
                 .interactiveDismissDisabled()
@@ -89,6 +91,7 @@ struct SidebarView: View {
         }
         .scrollContentBackground(Theme.solid ? .hidden : .automatic)
         .background(Theme.solid ? Theme.panel : Color.clear)
+        .tourStop(.sidebar)
         .overlay {
             if app.repos.isEmpty {
                 Text("No repositories yet").foregroundStyle(.secondary)
@@ -102,6 +105,7 @@ struct SidebarView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack(spacing: 8) {
                 GitOSMark(size: 20)
+                    .tourStop(.finish)
                 Text("GitOS").font(.system(.headline, design: .rounded).weight(.semibold))
                 Spacer()
                 if Theme.isFlat {
