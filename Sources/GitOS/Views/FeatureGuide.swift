@@ -49,6 +49,7 @@ extension GuideTopic {
                 "In the diff, use Stage Hunk above a hunk to stage just that part.",
                 "Click a line number to select a line, Shift-click to select a range, then choose Stage N Lines.",
                 "Write a message in the commit box and press ⌘↩. Add co-authors with the person button; GitOS adds the Co-authored-by lines for you.",
+                "Images and videos open as a preview, before and after side by side, instead of a binary diff. JSON files can switch to a formatted, coloured view. Use the Diff switch in the file's header to go back to the text diff.",
                 "Discard Changes asks first. Untracked files go to the Trash, so you can get them back.",
             ],
             shortcuts: [.init(keys: "⌘↩", action: "Commit"), .init(keys: "⌘R", action: "Refresh")]),
@@ -67,7 +68,7 @@ extension GuideTopic {
             summary: "Browse every commit with a graph of how branches split and merge, and open any commit to see its files and diff.",
             steps: [
                 "Open the History tab. Each lane in the graph is a line of work; merges join them.",
-                "Select a commit to see its message, author, files and diff.",
+                "Select a commit to see its message, author, files and diff. Images and videos in a commit show as previews, and JSON files have a Formatted JSON view.",
                 "Right-click a commit for more: start an interactive rebase from it (Pro) or review it with AI (Pro).",
             ]),
         GuideTopic(

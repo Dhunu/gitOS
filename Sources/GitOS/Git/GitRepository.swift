@@ -16,6 +16,43 @@ struct GitRepository: Sendable {
         return StatusParser.parse(output)
     }
 
+    /// The largest file GitOS loads for a preview.
+    static let previewLimit = 100_000_000
+
+    /// A file's contents at an object spec such as `HEAD:path`, `:path` (the index) or `sha:path`.
+    /// Nil when it doesn't exist there or is too big to preview.
+    func blob(_ spec: String) async -> Data? {
+        guard let size = try? await Git.run(["cat-file", "-s", spec], in: url),
+              let bytes = Int(size.trimmingCharacters(in: .whitespacesAndNewlines)), bytes <= Self.previewLimit
+        else { return nil }
+        return try? await Git.runData(["cat-file", "blob", spec], in: url)
+    }
+
+    /// Both sides of a working-tree change, matching what its diff compares: HEAD and the index for
+    /// staged changes, the index and the file on disk for unstaged ones.
+    func versions(for change: FileChange) async -> FileVersions {
+        let oldPath = change.originalPath ?? change.path
+        switch change.area {
+        case .staged:
+            return FileVersions(before: change.kind == .added ? nil : await blob("HEAD:\(oldPath)"),
+                                after: change.kind == .deleted ? nil : await blob(":\(change.path)"))
+        case .unstaged, .conflicted:
+            let file = url.appendingPathComponent(change.path)
+            let size = (try? file.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+            let onDisk = change.kind == .deleted || size > Self.previewLimit ? nil : try? Data(contentsOf: file)
+            let before = change.kind == .untracked ? nil : await blob(":\(oldPath)")
+            return FileVersions(before: before, after: onDisk)
+        }
+    }
+
+    /// Both sides of a file in a commit, against its first parent.
+    func versions(commit sha: String, diff: FileDiff) async -> FileVersions {
+        let added = diff.headerLines.contains { $0.hasPrefix("new file mode") }
+        let deleted = diff.headerLines.contains { $0.hasPrefix("deleted file mode") }
+        return FileVersions(before: added ? nil : await blob("\(sha)^:\(diff.oldPath ?? diff.path)"),
+                            after: deleted ? nil : await blob("\(sha):\(diff.path)"))
+    }
+
     func diff(for change: FileChange) async throws -> FileDiff? {
         let output: String
         switch (change.area, change.kind) {

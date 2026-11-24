@@ -125,7 +125,7 @@ struct HistoryView: View {
                         }
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Theme.panel)
-                        DiffContentView(diff: diff)
+                        CommitFileContent(model: model, sha: commit.sha, diff: diff)
                     }
                 }
             }
@@ -248,4 +248,33 @@ private struct GraphCell: View {
 private struct RebaseRequest: Identifiable {
     let commits: [Commit]
     var id: String { commits.map(\.sha).joined() }
+}
+
+/// One file in a commit: images and videos as themselves, JSON with a formatted view, the rest as a diff.
+private struct CommitFileContent: View {
+    let model: RepoModel
+    let sha: String
+    let diff: FileDiff
+    @State private var showFormatted = false
+
+    var body: some View {
+        switch PreviewKind.detect(path: diff.path) {
+        case .some(let kind) where kind.prefersPreview:
+            FilePreviewLoader(path: diff.path, kind: kind, id: "\(sha):\(diff.path)") {
+                await model.repo.versions(commit: sha, diff: diff)
+            }
+        case .some(.json):
+            VStack(alignment: .leading, spacing: 0) {
+                DisclosureGroup("Formatted JSON", isExpanded: $showFormatted) {
+                    FilePreviewLoader(path: diff.path, kind: .json, id: "\(sha):\(diff.path)") {
+                        await model.repo.versions(commit: sha, diff: diff)
+                    }
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                DiffContentView(diff: diff)
+            }
+        default:
+            DiffContentView(diff: diff)
+        }
+    }
 }
