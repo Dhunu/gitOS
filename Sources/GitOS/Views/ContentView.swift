@@ -18,6 +18,7 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var app = app
+        @Bindable var onboarding = Onboarding.shared
         NavigationSplitView(columnVisibility: $columns) {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
@@ -46,6 +47,13 @@ struct ContentView: View {
         .onChange(of: app.selectedRepoID) {
             if focusMode { focusBinding.wrappedValue = false }
         }
+        .sheet(isPresented: $onboarding.isPresented) {
+            OnboardingView { _ in }
+                .environment(app)
+                .flatPresentation()
+                .interactiveDismissDisabled()
+        }
+        .task { onboarding.presentIfNeeded(app: app) }
         .sheet(isPresented: $app.showingClone) {
             CloneSheet()
                 .flatPresentation()

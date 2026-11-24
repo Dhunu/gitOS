@@ -279,6 +279,10 @@ struct HelpCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("GitOS Guide") { openWindow(id: GuideWindow.id) }
                 .keyboardShortcut("?", modifiers: .command)
+            Button("Welcome to GitOS…") {
+                AppDelegate.showMainWindow()
+                Onboarding.shared.isPresented = true
+            }
         }
     }
 }
