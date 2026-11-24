@@ -8,8 +8,7 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.10.1"),
     ],
     targets: [
-        .executableTarget(name: "GitOS", dependencies: ["Sparkle"], path: "Sources/GitOS",
-                          exclude: ["ee/LICENSE", "ee/README.md"]),
+        .executableTarget(name: "GitOS", dependencies: ["Sparkle"], path: "Sources/GitOS"),
         .testTarget(name: "GitOSTests", dependencies: ["GitOS"], path: "Tests/GitOSTests"),
     ]
 )

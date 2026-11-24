@@ -105,21 +105,16 @@ Contributions are welcome. See the [contributing guide](CONTRIBUTING.md) to get 
 
 ## License
 
-GitOS is **source-available**, not open source in the OSI sense. All the code is here to read,
-build and change, under two licenses:
+GitOS is open source under the [GNU General Public License v3.0](LICENSE). You can use it for
+anything, including work, and you can read, change, build and share it, as long as anything you
+share that includes GitOS code is also under GPLv3 with its source.
 
-| Code | License | In short |
-|---|---|---|
-| Everything outside `ee/` | [PolyForm Noncommercial 1.0.0](LICENSE) | Free for personal, noncommercial use, and for charities, schools and public bodies. |
-| [`Sources/GitOS/ee/`](Sources/GitOS/ee) (AI review, PR triage) | [GitOS Commercial License](Sources/GitOS/ee/LICENSE) | Needs a GitOS Pro license to use. Free to build and change for development and testing. |
+If you build GitOS from source, every feature is unlocked. The signed app from
+[gitos.angelsaikia.com](https://gitos.angelsaikia.com) is free, with some Pro features that a
+paid license unlocks; buying it also gets you automatic updates and support.
 
-You need a commercial license from the author to:
+The GitOS name and icon are not covered by the GPL. See [TRADEMARK.md](TRADEMARK.md) before
+you share your own builds.
 
-- use GitOS for a business, including as an employee or as a contractor doing paid work, or
-- sell, rent or redistribute GitOS or builds of it.
-
-Licenses are available at [gitos.angelsaikia.com](https://gitos.angelsaikia.com). The license
-files are what count; this table is only a summary.
-
-Versions up to and including 0.4.1 were released under the MIT License and stay available
-under it.
+Version 0.4.1 and earlier were released under the MIT License, and 0.4.2 under the PolyForm
+Noncommercial License. Copies of those versions stay available under those licenses.
