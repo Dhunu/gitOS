@@ -7,7 +7,10 @@ struct SettingsView: View {
             Tab("Accounts", systemImage: "person.2") { AccountsSettings() }
             Tab("Folder Rules", systemImage: "folder.badge.person.crop") { FolderRulesSettings() }
             Tab("GitHub", systemImage: "key") { GitHubSettings() }
-            Tab("AI", systemImage: "sparkles") { AISettings() }
+            Tab("AI", systemImage: "sparkles") { ProGate(feature: .ai) { AISettings() } }
+            if Licensing.isOfficialBuild {
+                Tab("License", systemImage: "checkmark.seal") { LicenseSettings() }
+            }
         }
         .frame(width: 680, height: 460)
     }
@@ -126,7 +129,11 @@ private struct AccountsSettings: View {
                 }
                 Divider()
                 HStack(spacing: 0) {
-                    Button { showingSignIn = true } label: { Image(systemName: "plus").frame(width: 24, height: 20) }
+                    Button {
+                        if app.accounts.count < Licensing.freeAccountLimit || Licensing.shared.require(.accounts) {
+                            showingSignIn = true
+                        }
+                    } label: { Image(systemName: "plus").frame(width: 24, height: 20) }
                         .help("Add GitHub account")
                     Button {
                         pendingRemoval = app.account(id: selection)

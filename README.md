@@ -113,6 +113,15 @@ If you build GitOS from source, every feature is unlocked. The signed app from
 [gitos.angelsaikia.com](https://gitos.angelsaikia.com) is free, with some Pro features that a
 paid license unlocks; buying it also gets you automatic updates and support.
 
+| Free (signed app) | Pro (signed app, 30-day trial) · or build from source |
+|---|---|
+| Changes, line and hunk staging, commits, co-authors | Unlimited GitHub accounts |
+| History, commit graph, branches, merge, fetch, pull, push | Pull requests, PR triage and CI checks |
+| Clone, stashes, SSH and GPG signing | Issues |
+| 2 GitHub accounts with folder rules | AI commit messages, PR descriptions and code review |
+| Conflicts: keep ours or theirs for the whole file | 3-way conflict editor, interactive rebase, worktrees |
+| GitOS theme, Glass and Flat, menu bar, `gitos` CLI | Every theme |
+
 The GitOS name and icon are not covered by the GPL. See [TRADEMARK.md](TRADEMARK.md) before
 you share your own builds.
 
