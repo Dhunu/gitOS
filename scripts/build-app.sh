@@ -9,7 +9,11 @@ VERSION="0.4.2"
 # under the account "gitos" (back it up: generate_keys --account gitos -x <file>).
 SPARKLE_PUBLIC_KEY="vecXhaUoRcEc19rFlXLvb6hyeN3Q0PrwQy/k3GOZcRU="
 
-swift build -c release --product GitOS
+# GITOS_OFFICIAL=1 (set by release.sh) builds the app sold on the website: Free, with Pro behind a
+# license. Without it, every feature is unlocked.
+FLAGS=()
+[[ -n "${GITOS_OFFICIAL:-}" ]] && FLAGS=(-Xswiftc -DOFFICIAL_BUILD)
+swift build -c release --product GitOS "${FLAGS[@]}"
 BIN="$(swift build -c release --show-bin-path)/GitOS"
 APP="build/GitOS.app"
 

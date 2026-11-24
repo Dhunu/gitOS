@@ -14,7 +14,7 @@ REPO="Dhunu/gitOS"
 
 sed -i '' "s/^VERSION=\".*\"/VERSION=\"$VERSION\"/" scripts/build-app.sh
 swift test
-./scripts/make-dmg.sh
+GITOS_OFFICIAL=1 ./scripts/make-dmg.sh
 
 DMG="build/GitOS-$VERSION.dmg"
 SIGNATURE="$(.build/artifacts/sparkle/Sparkle/bin/sign_update --account gitos "$DMG")"

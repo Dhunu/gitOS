@@ -86,7 +86,8 @@ struct ChangesView: View {
     /// Shows the inline AI review of the pending changes under the diff, once one ran.
     @ViewBuilder
     private var reviewInset: some View {
-        if model.reviewState.reviews[.workingTree] != nil || model.reviewState.errors[.workingTree] != nil {
+        if Licensing.shared.isPro,
+           model.reviewState.reviews[.workingTree] != nil || model.reviewState.errors[.workingTree] != nil {
             ScrollView {
                 ReviewPanel(model: model, target: .workingTree) { finding in
                     let all = model.status.conflicted + model.status.unstaged + model.status.staged
@@ -138,8 +139,14 @@ struct ChangesView: View {
     @ViewBuilder
     private var diffPane: some View {
         if let change = model.selectedChange, change.area == .conflicted {
-            ConflictEditorView(model: model, change: change)
-                .id(change.id)
+            Group {
+                if Licensing.shared.isPro {
+                    ConflictEditorView(model: model, change: change)
+                } else {
+                    WholeFileConflictView(model: model, change: change)
+                }
+            }
+            .id(change.id)
         } else if let change = model.selectedChange {
             VStack(spacing: 0) {
                 HStack {
@@ -377,6 +384,7 @@ struct CommitBox: View {
         let provider = model.app.preferences.aiProvider
         let hasMessage = !model.summary.isEmpty || !model.details.isEmpty
         return Button {
+            guard Licensing.shared.require(.ai) else { return }
             Task { await model.generateCommitMessage() }
         } label: {
             if model.generatingMessage {
@@ -398,6 +406,7 @@ struct CommitBox: View {
         let reviewing = model.reviewState.running.contains(.workingTree)
         return Menu {
             Button {
+                guard Licensing.shared.require(.ai) else { return }
                 Task { await model.runReview(.workingTree) }
             } label: {
                 Label(reviewing ? "Reviewing…" : "Review Changes", systemImage: "text.badge.checkmark")
