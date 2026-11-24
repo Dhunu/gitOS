@@ -38,6 +38,32 @@ extension RepoModel {
         await loadChecks()
     }
 
+    /// Loads merged and closed pull requests. Throttled to once a minute unless `force`.
+    func loadClosedPullRequests(force: Bool = false) async {
+        guard let github else { return }
+        if !force, let loaded = closedPullRequestsLoadedAt, Date.now.timeIntervalSince(loaded) < 60 { return }
+        closedPullRequestsLoadedAt = .now
+        do {
+            let list = try await github.closedPullRequests()
+            closedPullRequests = list.items
+            allClosedPullRequestsLoaded = list.isComplete
+            githubError = nil
+        } catch {
+            githubError = app.noteRejectedSignIn(error, for: ref) ? nil : error.localizedDescription
+        }
+    }
+
+    /// Loads the conversation of an issue or pull request, once unless `force`.
+    func loadComments(for number: Int, force: Bool = false) async {
+        guard let github, force || comments[number] == nil else { return }
+        do {
+            comments[number] = try await github.comments(on: number)
+            commentErrors[number] = nil
+        } catch {
+            commentErrors[number] = error.localizedDescription
+        }
+    }
+
     func loadChecks() async {
         guard let github else { return }
         if let oid = status.oid, status.upstream != nil {

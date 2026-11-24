@@ -109,7 +109,8 @@ extension GuideTopic {
             summary: "See, open and review pull requests without leaving GitOS, with CI status for your branch.",
             steps: [
                 "Open the Pull Requests tab to see open pull requests for the repository.",
-                "Select one to read its description, files, checks and reviews.",
+                "Switch between Open and Merged & Closed at the top of the list. Merged pull requests show when they were merged; closed ones show when they were closed without merging.",
+                "Select one to read its description, CI checks and its whole conversation.",
                 "PR triage groups near-identical pull requests and orders the list by which are most worth your time.",
                 "The checks button in the toolbar shows CI status for the current branch.",
             ]),

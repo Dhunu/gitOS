@@ -43,6 +43,13 @@ final class RepoModel {
     var allPullRequestsLoaded = true
     var allIssuesLoaded = true
     var githubLoadedAt: Date?
+    /// Merged and closed pull requests, loaded the first time someone looks at them.
+    var closedPullRequests: [GitHubRepoAPI.PullRequest] = []
+    var allClosedPullRequestsLoaded = true
+    var closedPullRequestsLoadedAt: Date?
+    /// Conversations by issue or pull request number, loaded when one is opened.
+    var comments: [Int: [GitHubRepoAPI.Comment]] = [:]
+    var commentErrors: [Int: String] = [:]
     var triage = TriageState()
     var reviewState = ReviewState()
 

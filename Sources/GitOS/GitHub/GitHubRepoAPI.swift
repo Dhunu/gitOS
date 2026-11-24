@@ -43,13 +43,34 @@ struct GitHubRepoAPI: Sendable {
         let labels: [Label]
         /// OWNER, MEMBER, COLLABORATOR, CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER or NONE.
         let authorAssociation: String?
+        /// "open" or "closed". A merged pull request is closed with `mergedAt` set.
+        var state: String? = nil
+        var closedAt: Date? = nil
+        var mergedAt: Date? = nil
 
         var id: Int { number }
+        var isOpen: Bool { state != "closed" }
+        var isMerged: Bool { mergedAt != nil }
 
         enum CodingKeys: String, CodingKey {
-            case number, title, body, user, head, base, draft, labels
+            case number, title, body, user, head, base, draft, labels, state
             case htmlURL = "html_url", createdAt = "created_at", updatedAt = "updated_at"
             case authorAssociation = "author_association"
+            case closedAt = "closed_at", mergedAt = "merged_at"
+        }
+    }
+
+    /// A comment in an issue's or pull request's conversation.
+    struct Comment: Decodable, Identifiable, Hashable, Sendable {
+        let id: Int
+        let user: User
+        let body: String?
+        let createdAt: Date
+        let htmlURL: URL
+
+        enum CodingKeys: String, CodingKey {
+            case id, user, body
+            case createdAt = "created_at", htmlURL = "html_url"
         }
     }
 
@@ -93,6 +114,21 @@ struct GitHubRepoAPI: Sendable {
             try await api.send("GET", base + "/pulls?state=open&per_page=\(PagedList<PullRequest>.pageSize)&page=\(page)&sort=updated&direction=desc",
                                body: Optional<[String: String]>.none)
         }
+    }
+
+    /// The most recently updated closed and merged pull requests: one page, since a long-lived
+    /// repository can have thousands. `isComplete` is false when there are more on GitHub.
+    func closedPullRequests() async throws -> PagedList<PullRequest> {
+        let size = PagedList<PullRequest>.pageSize
+        let items: [PullRequest] = try await api.send(
+            "GET", base + "/pulls?state=closed&per_page=\(size)&page=1&sort=updated&direction=desc",
+            body: Optional<[String: String]>.none)
+        return PagedList(items: items, isComplete: items.count < size)
+    }
+
+    /// An issue's or pull request's conversation, oldest first (GitHub counts both as issues here).
+    func comments(on number: Int) async throws -> [Comment] {
+        try await api.send("GET", base + "/issues/\(number)/comments?per_page=100", body: Optional<[String: String]>.none)
     }
 
     func createPullRequest(title: String, body: String, head: String, base baseBranch: String, draft: Bool) async throws -> PullRequest {
