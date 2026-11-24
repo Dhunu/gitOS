@@ -93,12 +93,25 @@ struct GitHubRepoAPI: Sendable {
         let createdAt: Date
         /// Present when this "issue" is actually a pull request.
         let pullRequest: [String: String?]?
+        /// "open" or "closed".
+        var state: String? = nil
+        var closedAt: Date? = nil
+        /// Why it was closed: "completed", "not_planned" or "reopened".
+        var stateReason: String? = nil
+        var assignees: [User]? = nil
+        var milestone: Milestone? = nil
 
         var id: Int { number }
+        var isOpen: Bool { state != "closed" }
+
+        struct Milestone: Decodable, Hashable, Sendable {
+            let title: String
+        }
 
         enum CodingKeys: String, CodingKey {
-            case number, title, body, user, labels, comments
+            case number, title, body, user, labels, comments, state, assignees, milestone
             case htmlURL = "html_url", createdAt = "created_at", pullRequest = "pull_request"
+            case closedAt = "closed_at", stateReason = "state_reason"
         }
     }
 
@@ -144,6 +157,16 @@ struct GitHubRepoAPI: Sendable {
         }
         // GitHub counts pull requests as issues.
         return PagedList(items: all.items.filter { $0.pullRequest == nil }, isComplete: all.isComplete)
+    }
+
+    /// The most recently updated closed issues: one page, like `closedPullRequests()`.
+    func closedIssues() async throws -> PagedList<Issue> {
+        let size = PagedList<Issue>.pageSize
+        let items: [Issue] = try await api.send(
+            "GET", base + "/issues?state=closed&per_page=\(size)&page=1&sort=updated&direction=desc",
+            body: Optional<[String: String]>.none)
+        // GitHub counts pull requests as issues; the page size check uses the unfiltered count.
+        return PagedList(items: items.filter { $0.pullRequest == nil }, isComplete: items.count < size)
     }
 
     func createIssue(title: String, body: String) async throws -> Issue {

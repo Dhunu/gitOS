@@ -117,7 +117,11 @@ extension GuideTopic {
         GuideTopic(
             id: "issues", title: "Issues", systemImage: "smallcircle.filled.circle", isPro: true,
             summary: "Browse and read the repository's GitHub issues next to your code.",
-            steps: ["Open the Issues tab and select an issue to read it and its comments."]),
+            steps: [
+                "Open the Issues tab. Switch between Open and Closed at the top of the list.",
+                "Select an issue to see its state (open, closed as completed, or closed as not planned), when it was opened and closed, assignees, milestone, labels and the whole conversation.",
+                "Right-click an open issue to reference it in your commit message, or close it with your next commit.",
+            ]),
         GuideTopic(
             id: "worktrees", title: "Worktrees", systemImage: "square.stack.3d.up", isPro: true,
             summary: "Check out more than one branch at once, each in its own folder, without stashing.",

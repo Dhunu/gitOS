@@ -47,6 +47,9 @@ final class RepoModel {
     var closedPullRequests: [GitHubRepoAPI.PullRequest] = []
     var allClosedPullRequestsLoaded = true
     var closedPullRequestsLoadedAt: Date?
+    var closedIssues: [GitHubRepoAPI.Issue] = []
+    var allClosedIssuesLoaded = true
+    var closedIssuesLoadedAt: Date?
     /// Conversations by issue or pull request number, loaded when one is opened.
     var comments: [Int: [GitHubRepoAPI.Comment]] = [:]
     var commentErrors: [Int: String] = [:]

@@ -44,3 +44,27 @@ struct ClosedItemsTests {
         #expect(comments.first?.user.login == "grace" && comments.first?.body == "Looks good")
     }
 }
+
+struct ClosedIssueTests {
+    func issue(_ extra: String) throws -> GitHubRepoAPI.Issue {
+        let json = """
+        {"number": 3, "title": "Bug", "body": "x", "user": {"login": "ada", "avatar_url": null}, "labels": [],
+         "comments": 1, "html_url": "https://github.com/o/r/issues/3", "created_at": "2026-10-01T10:00:00Z"\(extra)}
+        """
+        return try GitHubAPI.decoder.decode(GitHubRepoAPI.Issue.self, from: Data(json.utf8))
+    }
+
+    @Test func issueStates() throws {
+        #expect(IssueState(try issue("")) == .open)
+        #expect(IssueState(try issue(#", "state": "open""#)) == .open)
+        let done = try issue(#", "state": "closed", "state_reason": "completed", "closed_at": "2026-10-05T10:00:00Z""#)
+        #expect(IssueState(done) == .completed && done.closedAt != nil)
+        #expect(IssueState(try issue(#", "state": "closed", "state_reason": "not_planned""#)) == .notPlanned)
+    }
+
+    @Test func decodesAssigneesAndMilestone() throws {
+        let decoded = try issue(#", "assignees": [{"login": "grace", "avatar_url": null}], "milestone": {"title": "1.0", "number": 2}"#)
+        #expect(decoded.assignees?.first?.login == "grace")
+        #expect(decoded.milestone?.title == "1.0")
+    }
+}

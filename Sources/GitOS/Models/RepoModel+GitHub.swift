@@ -53,6 +53,21 @@ extension RepoModel {
         }
     }
 
+    /// Loads closed issues. Throttled to once a minute unless `force`.
+    func loadClosedIssues(force: Bool = false) async {
+        guard let github else { return }
+        if !force, let loaded = closedIssuesLoadedAt, Date.now.timeIntervalSince(loaded) < 60 { return }
+        closedIssuesLoadedAt = .now
+        do {
+            let list = try await github.closedIssues()
+            closedIssues = list.items
+            allClosedIssuesLoaded = list.isComplete
+            githubError = nil
+        } catch {
+            githubError = app.noteRejectedSignIn(error, for: ref) ? nil : error.localizedDescription
+        }
+    }
+
     /// Loads the conversation of an issue or pull request, once unless `force`.
     func loadComments(for number: Int, force: Bool = false) async {
         guard let github, force || comments[number] == nil else { return }
