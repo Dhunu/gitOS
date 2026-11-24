@@ -27,6 +27,7 @@ struct GitOSApp: App {
                     .keyboardShortcut("o", modifiers: [.command, .shift])
             }
             UpdateCommands()
+            HelpCommands()
             FocusModeCommands()
             CommandMenu("Repository") {
                 Button("Fetch All Repositories") { Task { await app.sync.fetchAll() } }
@@ -40,6 +41,13 @@ struct GitOSApp: App {
                 .themedWindow()
                 .upgradeSheet()
         }
+
+        Window("GitOS Guide", id: GuideWindow.id) {
+            GuideWindow()
+                .themedWindow()
+                .upgradeSheet()
+        }
+        .defaultSize(width: 860, height: 600)
 
         Window("Software Update", id: UpdateWindow.id) {
             UpdateWindow(updater: AppUpdater.shared)
