@@ -20,20 +20,14 @@ struct GitOSApp: App {
         }
         .handlesExternalEvents(matching: [])
         .commands {
-            CommandGroup(after: .appInfo) {
-                if AppUpdater.shared.isReadyToInstall {
-                    Button("Restart to Update…") { AppUpdater.shared.installAndRestart() }
-                } else {
-                    Button("Check for Updates…") { AppUpdater.shared.checkForUpdates() }
-                        .disabled(!AppUpdater.shared.isAvailable)
-                }
-            }
             CommandGroup(after: .newItem) {
                 Button("Add Local Repository…") { app.addRepositoryViaPanel() }
                     .keyboardShortcut("o")
                 Button("Clone Repository…") { app.showingClone = true }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
             }
+            UpdateCommands()
+            HelpCommands()
             FocusModeCommands()
             CommandMenu("Repository") {
                 Button("Fetch All Repositories") { Task { await app.sync.fetchAll() } }
@@ -47,6 +41,21 @@ struct GitOSApp: App {
                 .themedWindow()
                 .upgradeSheet()
         }
+
+        Window("GitOS Guide", id: GuideWindow.id) {
+            GuideWindow()
+                .themedWindow()
+                .upgradeSheet()
+        }
+        .defaultSize(width: 860, height: 600)
+
+        Window("Software Update", id: UpdateWindow.id) {
+            UpdateWindow(updater: AppUpdater.shared)
+                .themedWindow()
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+        .restorationBehavior(.disabled)
 
         MenuBarExtra(isInserted: $app.preferences.showMenuBarExtra) {
             MenuBarView()

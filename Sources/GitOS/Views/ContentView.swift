@@ -18,6 +18,7 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var app = app
+        @Bindable var onboarding = Onboarding.shared
         NavigationSplitView(columnVisibility: $columns) {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
@@ -46,6 +47,15 @@ struct ContentView: View {
         .onChange(of: app.selectedRepoID) {
             if focusMode { focusBinding.wrappedValue = false }
         }
+        .sheet(isPresented: $onboarding.isPresented) {
+            OnboardingView { startTour in
+                if startTour { Tour.shared.start(hasRepository: app.selectedRepo != nil) }
+            }
+                .environment(app)
+                .flatPresentation()
+                .interactiveDismissDisabled()
+        }
+        .task { onboarding.presentIfNeeded(app: app) }
         .sheet(isPresented: $app.showingClone) {
             CloneSheet()
                 .flatPresentation()
@@ -81,6 +91,7 @@ struct SidebarView: View {
         }
         .scrollContentBackground(Theme.solid ? .hidden : .automatic)
         .background(Theme.solid ? Theme.panel : Color.clear)
+        .tourStop(.sidebar)
         .overlay {
             if app.repos.isEmpty {
                 Text("No repositories yet").foregroundStyle(.secondary)
@@ -94,6 +105,7 @@ struct SidebarView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack(spacing: 8) {
                 GitOSMark(size: 20)
+                    .tourStop(.finish)
                 Text("GitOS").font(.system(.headline, design: .rounded).weight(.semibold))
                 Spacer()
                 if Theme.isFlat {

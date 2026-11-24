@@ -44,10 +44,22 @@ struct MenuBarView: View {
 
             Divider()
 
+            if AppUpdater.shared.phase != .idle {
+                UpdateMenuBarRow(updater: AppUpdater.shared) { showUpdates() }
+                Divider()
+            }
+
             HStack {
                 Button("Fetch All", systemImage: "arrow.clockwise") { Task { await app.sync.fetchAll() } }
                 Spacer()
                 Button("Open GitOS") { open() }
+                Button("Check for Updates", systemImage: "arrow.down.circle") {
+                    showUpdates()
+                    if !AppUpdater.shared.isReadyToInstall { AppUpdater.shared.checkForUpdates() }
+                }
+                .labelStyle(.iconOnly)
+                .disabled(!AppUpdater.shared.isAvailable)
+                .help(AppUpdater.shared.isReadyToInstall ? "An update is ready" : "Check for updates")
                 Button("Settings", systemImage: "gearshape") {
                     NSApp.activate()
                     openSettings()
@@ -61,6 +73,11 @@ struct MenuBarView: View {
         }
         .frame(width: 340)
         .onAppear { OpenMainWindow.action = { openWindow(id: "main") } }
+    }
+
+    private func showUpdates() {
+        NSApp.activate()
+        openWindow(id: UpdateWindow.id)
     }
 
     private func open() {

@@ -215,3 +215,9 @@ struct Person: Identifiable, Hashable, Sendable, Codable {
         self.email = email
     }
 }
+
+/// The two sides of a changed file. Either is nil when the file was added or deleted.
+struct FileVersions: Equatable, Sendable {
+    var before: Data?
+    var after: Data?
+}

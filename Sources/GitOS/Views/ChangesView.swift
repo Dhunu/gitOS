@@ -4,6 +4,8 @@ struct ChangesView: View {
     @Bindable var model: RepoModel
     @State private var pendingDiscard: FileChange?
     @State private var lineSelection: Set<DiffLineID> = []
+    /// Diff or preview, when the user has picked one for the selected file.
+    @State private var previewChoice: Bool?
     @Environment(\.focusMode) private var focusMode
 
     /// Focus mode hides the file list, but only while a file is selected — otherwise
@@ -15,19 +17,23 @@ struct ChangesView: View {
             if !listHidden {
                 VStack(spacing: 0) {
                     fileList
+                        .tourStop(.changes)
                     Divider()
                     CommitBox(model: model)
                         .background(Theme.isFlat ? Theme.canvas : Theme.panel)
+                        .tourStop(.commit)
                 }
                 .frame(minWidth: 280, idealWidth: 340, maxWidth: 520)
             }
 
             diffPane
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                .tourStop(.diff)
                 .safeAreaInset(edge: .bottom, spacing: 0) { reviewInset }
         }
         .sidebarInsetAsPadding()
         .onChange(of: model.currentDiff) { lineSelection = [] }
+        .onChange(of: model.selectedChangeID) { previewChoice = nil }
         .confirmationDialog(
             "Discard changes to \(pendingDiscard?.fileName ?? "")?",
             isPresented: Binding(get: { pendingDiscard != nil }, set: { if !$0 { pendingDiscard = nil } }),
@@ -155,6 +161,16 @@ struct ChangesView: View {
                         Text("← \(original)").foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
+                    if let kind = PreviewKind.detect(path: change.path) {
+                        Picker("Show", selection: Binding(get: { isPreviewing(change) }, set: { previewChoice = $0 })) {
+                            Text("Diff").tag(false)
+                            Text(kind.label).tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
+                        .help("Switch between the text diff and a preview of the file")
+                    }
                     Pill(text: change.area == .staged ? "staged" : change.area == .conflicted ? "conflicted" : "unstaged",
                          tint: change.area == .staged ? Theme.added : change.area == .conflicted ? Theme.conflict : Theme.modified)
                     FocusModeButton()
@@ -162,7 +178,13 @@ struct ChangesView: View {
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(Theme.isFlat ? Theme.canvas : Theme.panel)
                 Divider()
-                if let diff = model.currentDiff {
+                if let kind = PreviewKind.detect(path: change.path), isPreviewing(change) {
+                    ScrollView {
+                        FilePreviewLoader(path: change.path, kind: kind, id: previewID(change)) {
+                            await model.repo.versions(for: change)
+                        }
+                    }
+                } else if let diff = model.currentDiff {
                     ScrollView {
                         DiffContentView(diff: diff, hunkActions: hunkActions(for: change, diff: diff), selection: $lineSelection)
                             .padding(.bottom, 12)
@@ -176,6 +198,17 @@ struct ChangesView: View {
             ContentUnavailableView("Select a File", systemImage: "doc.text",
                                    description: Text("Pick a changed file to see its diff."))
         }
+    }
+
+    private func isPreviewing(_ change: FileChange) -> Bool {
+        previewChoice ?? PreviewKind.detect(path: change.path)?.prefersPreview ?? false
+    }
+
+    /// Changes when the file does, so an edited image or JSON file reloads its preview.
+    private func previewID(_ change: FileChange) -> String {
+        let file = model.repo.url.appendingPathComponent(change.path)
+        let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        return "\(change.id)|\(modified?.timeIntervalSince1970 ?? 0)|\(model.status.staged.count)"
     }
 
     private func hunkActions(for change: FileChange, diff: FileDiff) -> [HunkActionButton] {

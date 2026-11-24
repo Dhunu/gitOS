@@ -1,70 +1,55 @@
 import CoreGraphics
-import Foundation
 
-/// The GitOS mark: one repository's line forks towards several GitHub accounts, and the switch is
-/// set to the one in use, like a railway junction. Shared by the app and `scripts/make-icon.swift`,
-/// so it only needs CoreGraphics. Coordinates are y-down.
+/// The GitOS "Points" mark: a rail switch whose route is set to one account (the dot), while the
+/// other blade stands open. Drawn in the brand's 1024-unit design space (see Resources/Brand) and
+/// fitted into any rect. Coordinates are y-down.
 enum GitOSMarkGeometry {
-    private static let lineWidth: CGFloat = 0.09
-    private static let rootSize: CGFloat = 0.092
-    private static let idleSize: CGFloat = 0.082
-    private static let accountSize: CGFloat = 0.195
-    private static let root = CGPoint(x: 0.13, y: 0.5)
-    private static let fork = CGPoint(x: 0.27, y: 0.5)
-    private static let account = CGPoint(x: 0.755, y: 0.5)
-    private static let idleAccounts = [CGPoint(x: 0.68, y: 0.135), CGPoint(x: 0.68, y: 0.865)]
+    /// The mark's bounds in design units.
+    static let box = CGRect(x: 312, y: 184, width: 444, height: 664)
+    /// The one stroke weight, in design units.
+    private static let weight: CGFloat = 96
 
-    private static func scaled(_ point: CGPoint, in rect: CGRect) -> CGPoint {
-        CGPoint(x: rect.minX + point.x * rect.width, y: rect.minY + point.y * rect.height)
+    /// Maps design units into `rect`, aspect-fit and centred.
+    static func transform(in rect: CGRect) -> CGAffineTransform {
+        let k = min(rect.width / box.width, rect.height / box.height)
+        return CGAffineTransform(translationX: rect.midX, y: rect.midY)
+            .scaledBy(x: k, y: k)
+            .translatedBy(x: -box.midX, y: -box.midY)
     }
 
-    private static func circle(_ center: CGPoint, _ radius: CGFloat, in rect: CGRect, stretchedBy stretch: CGFloat = 1) -> CGPath {
-        let c = scaled(center, in: rect)
-        let r = radius * rect.width
-        return CGPath(ellipseIn: CGRect(x: c.x - r * stretch, y: c.y - r, width: r * stretch * 2, height: r * 2), transform: nil)
+    private static func fitted(_ path: CGPath, in rect: CGRect) -> CGPath {
+        var t = transform(in: rect)
+        return path.copy(using: &t) ?? path
     }
 
-    /// The accounts not in use, and the tracks that lead to them.
-    static func idleTracks(in rect: CGRect) -> CGPath {
-        var shape = CGMutablePath().copy()!
-        for end in idleAccounts {
-            let line = CGMutablePath()
-            line.move(to: scaled(fork, in: rect))
-            line.addCurve(to: scaled(end, in: rect),
-                          control1: scaled(CGPoint(x: fork.x + 0.17, y: fork.y), in: rect),
-                          control2: scaled(CGPoint(x: end.x - 0.24, y: end.y), in: rect))
-            shape = shape.union(line.copy(strokingWithWidth: lineWidth * rect.width, lineCap: .round, lineJoin: .round, miterLimit: 10))
-            shape = shape.union(circle(end, idleSize, in: rect))
-        }
-        return shape
+    private static func stroked(_ path: CGPath) -> CGPath {
+        path.copy(strokingWithWidth: weight, lineCap: .round, lineJoin: .round, miterLimit: 10)
     }
 
-    /// The repository's line, running straight to the account in use.
-    static func activeTrack(in rect: CGRect) -> CGPath {
-        let line = CGMutablePath()
-        line.move(to: scaled(root, in: rect))
-        line.addLine(to: scaled(account, in: rect))
-        return line.copy(strokingWithWidth: lineWidth * rect.width, lineCap: .round, lineJoin: .round, miterLimit: 10)
-            .union(circle(root, rootSize, in: rect))
+    /// The set route: the stem and the arm that runs to the account in use.
+    static func route(in rect: CGRect) -> CGPath {
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: 512, y: 800))
+        p.addLine(to: CGPoint(x: 512, y: 620))
+        p.addCurve(to: CGPoint(x: 664, y: 300), control1: CGPoint(x: 512, y: 470), control2: CGPoint(x: 664, y: 450))
+        return fitted(stroked(p), in: rect)
     }
 
-    /// The account in use: a disc with a person cut out of it.
-    static func activeAccount(in rect: CGRect) -> CGPath {
-        let head = circle(CGPoint(x: account.x, y: account.y - 0.058), 0.062, in: rect)
-        let shoulders = circle(CGPoint(x: account.x, y: account.y + 0.135), 0.094, in: rect, stretchedBy: 1.25)
-            .intersection(circle(account, accountSize - 0.04, in: rect))
-        return circle(account, accountSize, in: rect).subtracting(head).subtracting(shoulders)
+    /// The open blade: the other account's arm, stopping short of the route.
+    static func openBlade(in rect: CGRect) -> CGPath {
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: 431.44, y: 454.90))
+        p.addCurve(to: CGPoint(x: 360, y: 300), control1: CGPoint(x: 395.02, y: 414.05), control2: CGPoint(x: 360, y: 372))
+        return fitted(stroked(p), in: rect)
     }
 
-    /// The whole mark as one shape, for one-color use. The track stops at the disc's edge, so the person stays cut out.
+    /// The account in use.
+    static func node(in rect: CGRect) -> CGPath {
+        fitted(CGPath(ellipseIn: CGRect(x: 664 - 92, y: 276 - 92, width: 184, height: 184), transform: nil), in: rect)
+    }
+
+    /// The whole mark as one shape, for one-color use such as the menu bar.
     static func solid(in rect: CGRect) -> CGPath {
-        idleTracks(in: rect)
-            .union(activeTrack(in: rect).subtracting(circle(account, accountSize, in: rect)))
-            .union(activeAccount(in: rect))
-    }
-
-    /// The disc behind the person, so the track doesn't show through the cutout.
-    static func activeAccountBacking(in rect: CGRect) -> CGPath {
-        circle(account, accountSize, in: rect)
+        route(in: rect).union(openBlade(in: rect)).union(node(in: rect))
     }
 }

@@ -38,10 +38,6 @@ enum Theme {
         lanes[name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) } % lanes.count]
     }
 
-    static var markGradient: LinearGradient {
-        LinearGradient(colors: [palette.gradientStart.color, palette.gradientEnd.color],
-                       startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
 }
 
 extension Color {
@@ -54,19 +50,28 @@ extension Color {
     }
 }
 
-/// The GitOS mark at any size.
+private extension Color {
+    /// The brand's fixed colours, written as in the design files.
+    init(hex: UInt32) {
+        self.init(red: Double(hex >> 16 & 0xFF) / 255, green: Double(hex >> 8 & 0xFF) / 255, blue: Double(hex & 0xFF) / 255)
+    }
+}
+
+/// The GitOS mark at any size: ink route, quiet open blade, vermilion account dot.
 struct GitOSMark: View {
     var size: CGFloat = 20
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let rect = CGRect(x: 0, y: 0, width: size, height: size)
+        let dark = colorScheme == .dark
         ZStack {
-            Path(GitOSMarkGeometry.idleTracks(in: rect)).fill(Theme.accent.opacity(0.4))
-            Path(GitOSMarkGeometry.activeTrack(in: rect).subtracting(GitOSMarkGeometry.activeAccountBacking(in: rect)))
-                .fill(Theme.markGradient)
-            Path(GitOSMarkGeometry.activeAccount(in: rect)).fill(Theme.head)
+            Path(GitOSMarkGeometry.openBlade(in: rect)).fill(dark ? Color(hex: 0x5A5D66) : Color(hex: 0xB9B4A9))
+            Path(GitOSMarkGeometry.route(in: rect)).fill(dark ? Color(hex: 0xEDE9E0) : Color(hex: 0x1B1D22))
+            Path(GitOSMarkGeometry.node(in: rect)).fill(dark ? Color(hex: 0xF0553A) : Color(hex: 0xE4472B))
         }
         .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 
     /// One-color version for the menu bar.

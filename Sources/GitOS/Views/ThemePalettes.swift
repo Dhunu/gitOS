@@ -60,16 +60,18 @@ struct ThemePalette: Identifiable, Sendable, Hashable {
         )
     }
 
-    /// GitOS's own palette, taken from the app icon. Adapts to light and dark mode.
+    /// GitOS's own palette, built on the Points logo: "paper" in light mode and "graphite" in dark,
+    /// designed separately (see gitos-web/THEME.md). The accent is cobalt; red only ever means removed
+    /// lines, errors and destructive actions, never the brand.
     static let gitOS = ThemePalette(
         id: "gitos", name: "GitOS", scheme: nil,
-        accent: .init(light: 0x0F857B, dark: 0x2BA799), head: .init(light: 0xB9791F, dark: 0xFFC978),
-        canvas: .init(light: 0xF7F8FA, dark: 0x14171F), panel: .init(light: 0xEFF2F4, dark: 0x1A1E28),
-        field: .init(light: 0xFFFFFF, dark: 0x10131A),
-        added: .init(light: 0x2F8A5F, dark: 0x6CC79A), modified: .init(light: 0xAD7419, dark: 0xE3B66B),
-        removed: .init(light: 0xBF4E5A, dark: 0xEA8F95), renamed: .init(light: 0x4E69C9, dark: 0x93A8F2),
-        conflict: .init(light: 0x8256C4, dark: 0xB89AEE), extraLane: .init(light: 0x2F86B3, dark: 0x7CC0E6),
-        gradientStart: .init(light: 0x13A08F, dark: 0x6FE9D3), gradientEnd: .init(light: 0x5470DE, dark: 0x8FA4FF)
+        accent: .init(light: 0x2F58CD, dark: 0x93ABFF), head: .init(light: 0x0E7C72, dark: 0x57C5B8),
+        canvas: .init(light: 0xF6F4EF, dark: 0x131417), panel: .init(light: 0xECE9E2, dark: 0x1B1C20),
+        field: .init(light: 0xFDFCFA, dark: 0x0E0F12),
+        added: .init(light: 0x1E7A46, dark: 0x6BC48A), modified: .init(light: 0x9A6300, dark: 0xE3B45E),
+        removed: .init(light: 0xC0392B, dark: 0xF07468), renamed: .init(light: 0x2A73A6, dark: 0x7DBDE6),
+        conflict: .init(light: 0x7A4BC4, dark: 0xB79BF0), extraLane: .init(light: 0x9B4D8A, dark: 0xD99ACB),
+        gradientStart: .init(light: 0x2F58CD, dark: 0x93ABFF), gradientEnd: .init(light: 0x1B1D22, dark: 0xEDE9E0)
     )
 
     static let all: [ThemePalette] = [

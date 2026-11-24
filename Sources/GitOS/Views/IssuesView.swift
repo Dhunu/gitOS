@@ -7,15 +7,18 @@ struct IssuesView: View {
     @State private var selection: Int?
     @State private var search = ""
     @State private var showingNew = false
+    @State private var scope = ItemScope.open
     @Environment(\.focusMode) private var focusMode
 
+    private var shown: [GitHubRepoAPI.Issue] { scope == .open ? model.issues : model.closedIssues }
+
     private var filtered: [GitHubRepoAPI.Issue] {
-        guard !search.isEmpty else { return model.issues }
-        return model.issues.filter { $0.title.localizedCaseInsensitiveContains(search) || "#\($0.number)".hasPrefix(search) }
+        guard !search.isEmpty else { return shown }
+        return shown.filter { $0.title.localizedCaseInsensitiveContains(search) || "#\($0.number)".hasPrefix(search) }
     }
 
     private var selectedIssue: GitHubRepoAPI.Issue? {
-        model.issues.first { $0.number == selection }
+        shown.first { $0.number == selection }
     }
 
     /// Focus mode hides the issue list, but only while an issue is selected.
@@ -34,6 +37,7 @@ struct IssuesView: View {
             }
             .sidebarInsetAsPadding()
             .task { await model.loadGitHub() }
+            .task(id: scope) { if scope == .closed { await model.loadClosedIssues() } }
             .sheet(isPresented: $showingNew) {
                 NewIssueSheet(model: model) { selection = $0.number }
                     .flatPresentation()
@@ -45,13 +49,17 @@ struct IssuesView: View {
         List(filtered, selection: $selection) { issue in
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .top) {
-                    Image(systemName: "smallcircle.filled.circle").foregroundStyle(Theme.added)
+                    Image(systemName: IssueState(issue).systemImage).foregroundStyle(IssueState(issue).color)
                     Text(issue.title).lineLimit(2)
                 }
                 HStack(spacing: 4) {
                     Text("#\(issue.number)")
                     Text("·")
                     Text(issue.user.login)
+                    if let closed = issue.closedAt {
+                        Text("·")
+                        Text("closed \(closed.formatted(.relative(presentation: .named)))")
+                    }
                     if issue.comments > 0 {
                         Label("\(issue.comments)", systemImage: "bubble.left")
                     }
@@ -65,26 +73,46 @@ struct IssuesView: View {
             .tag(issue.number)
             .contextMenu {
                 Button("Reference in Commit Message") { reference(issue, closes: false) }
-                Button("Close with Next Commit") { reference(issue, closes: true) }
+                if issue.isOpen {
+                    Button("Close with Next Commit") { reference(issue, closes: true) }
+                }
                 Button("Open on GitHub") { NSWorkspace.shared.open(issue.htmlURL) }
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            HStack {
-                TextField("Filter issues", text: $search).textFieldStyle(.roundedBorder)
-                Button("New Issue…", systemImage: "plus") { showingNew = true }
+            VStack(spacing: 8) {
+                Picker("Show", selection: $scope) {
+                    Text("Open").tag(ItemScope.open)
+                    Text("Closed").tag(ItemScope.closed)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: scope) { selection = nil }
+                HStack {
+                    TextField("Filter issues", text: $search).textFieldStyle(.roundedBorder)
+                    Button("New Issue…", systemImage: "plus") { showingNew = true }
+                    Button("Reload", systemImage: "arrow.clockwise") {
+                        Task {
+                            if scope == .closed { await model.loadClosedIssues(force: true) } else { await model.loadGitHub(force: true) }
+                            if let selection { await model.loadComments(for: selection, force: true) }
+                        }
+                    }
+                    .labelStyle(.iconOnly)
+                }
             }
             .padding(8)
             .background(Theme.panel)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !model.allIssuesLoaded {
+            if scope == .open && !model.allIssuesLoaded {
                 ListLimitNotice(url: model.gitHubPage("issues"))
+            } else if scope == .closed && !model.allClosedIssuesLoaded {
+                ListLimitNotice(url: model.gitHubPage("issues?q=is%3Aissue+is%3Aclosed"))
             }
         }
         .overlay {
-            if model.issues.isEmpty {
-                ContentUnavailableView("No Open Issues", systemImage: "checkmark.circle",
+            if shown.isEmpty {
+                ContentUnavailableView(scope == .open ? "No Open Issues" : "No Closed Issues", systemImage: "checkmark.circle",
                                        description: Text(model.githubError ?? ""))
             }
         }
@@ -103,12 +131,13 @@ struct IssuesView: View {
                         Spacer()
                         FocusModeButton()
                     }
-                    Text("Opened by \(issue.user.login) \(issue.createdAt.formatted(.relative(presentation: .named)))")
-                        .font(.callout).foregroundStyle(.secondary)
+                    IssueFacts(issue: issue)
                     HStack {
-                        Button("Close with Next Commit", systemImage: "checkmark.circle") { reference(issue, closes: true) }
-                            .prominentButton()
-                            .help("Adds “Fixes #\(issue.number)” to the commit message")
+                        if issue.isOpen {
+                            Button("Close with Next Commit", systemImage: "checkmark.circle") { reference(issue, closes: true) }
+                                .prominentButton()
+                                .help("Adds “Fixes #\(issue.number)” to the commit message")
+                        }
                         Button("Reference", systemImage: "number") { reference(issue, closes: false) }
                         Button("Open on GitHub", systemImage: "safari") { NSWorkspace.shared.open(issue.htmlURL) }
                     }
@@ -118,10 +147,12 @@ struct IssuesView: View {
                     } else {
                         Text("No description provided.").foregroundStyle(.secondary).italic()
                     }
+                    CommentsSection(model: model, number: issue.number)
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .task(id: issue.number) { await model.loadComments(for: issue.number) }
         } else {
             ContentUnavailableView("Select an Issue", systemImage: "smallcircle.filled.circle")
         }
@@ -190,5 +221,72 @@ struct ListLimitNotice: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
         .background(Theme.panel)
+    }
+}
+
+/// An issue's state, as GitHub shows it.
+enum IssueState: Equatable {
+    case open, completed, notPlanned
+
+    init(_ issue: GitHubRepoAPI.Issue) {
+        self = issue.isOpen ? .open : issue.stateReason == "not_planned" ? .notPlanned : .completed
+    }
+
+    var title: String {
+        switch self {
+        case .open: "Open"
+        case .completed: "Closed as completed"
+        case .notPlanned: "Closed as not planned"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .open: "smallcircle.filled.circle"
+        case .completed: "checkmark.circle"
+        case .notPlanned: "slash.circle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .open: Theme.added
+        case .completed: .purple
+        case .notPlanned: .secondary
+        }
+    }
+}
+
+/// State, dates, assignees, milestone and labels under an issue's title.
+private struct IssueFacts: View {
+    let issue: GitHubRepoAPI.Issue
+
+    var body: some View {
+        let state = IssueState(issue)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Label(state.title, systemImage: state.systemImage)
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(state.color.opacity(0.18), in: Capsule())
+                    .foregroundStyle(state.color)
+                Text("Opened by \(issue.user.login) \(issue.createdAt.formatted(.relative(presentation: .named)))")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            if let closed = issue.closedAt {
+                Text("Closed \(closed.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            if let assignees = issue.assignees, !assignees.isEmpty {
+                Label("Assigned to \(assignees.map(\.login).formatted(.list(type: .and)))", systemImage: "person")
+                    .font(.callout)
+            }
+            if let milestone = issue.milestone {
+                Label("Milestone: \(milestone.title)", systemImage: "flag").font(.callout)
+            }
+            if !issue.labels.isEmpty {
+                HStack(spacing: 3) { ForEach(issue.labels, id: \.name) { LabelChip(label: $0) } }
+            }
+        }
     }
 }
