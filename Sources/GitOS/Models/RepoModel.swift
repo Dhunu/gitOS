@@ -378,12 +378,22 @@ final class RepoModel {
         }
     }
 
+    /// Whether the branch tracks a remote branch of the same name. A branch made from origin/main
+    /// tracks main; pushing it as-is would fail (or, with push.default=upstream, push onto main),
+    /// so such branches are pushed to their own name and tracked there instead.
+    nonisolated static func upstreamMatches(branch: String?, upstream: String?) -> Bool {
+        guard let branch, let upstream, let slash = upstream.firstIndex(of: "/") else { return false }
+        return upstream[upstream.index(after: slash)...] == branch
+    }
+
     func forcePush() async {
         guard !gitButlerBlocked else { return }
         let context = app.gitContext(for: ref)
         let remote = primaryRemote?.name ?? "origin"
         await perform("Force pushing") {
-            try await repo.push(remote: remote, setUpstream: status.upstream == nil, force: true, context: context)
+            try await repo.push(remote: remote,
+                                setUpstream: !Self.upstreamMatches(branch: status.branch, upstream: status.upstream),
+                                force: true, context: context)
         }
         await loadGitHub(force: true)
     }
@@ -419,8 +429,9 @@ final class RepoModel {
     /// Pushes, first checking that unpushed commits were authored by the account that will push them.
     func push(force skipCheck: Bool = false) async {
         guard !gitButlerBlocked else { return }
+        let needsUpstream = !Self.upstreamMatches(branch: status.branch, upstream: status.upstream)
         if !skipCheck, let account = resolved.account {
-            let emails = (try? await repo.unpushedAuthorEmails(hasUpstream: status.upstream != nil)) ?? []
+            let emails = (try? await repo.unpushedAuthorEmails(hasUpstream: !needsUpstream)) ?? []
             let foreign = emails.filter { !account.owns(email: $0) }.sorted()
             if !foreign.isEmpty {
                 pushWarning = PushWarning(foreignEmails: foreign, account: account)
@@ -429,7 +440,6 @@ final class RepoModel {
         }
         let context = app.gitContext(for: ref)
         let remote = primaryRemote?.name ?? "origin"
-        let needsUpstream = status.upstream == nil
         let branch = status.branch
         let account = resolved.account
         let pushed = await perform("Pushing") {
@@ -442,7 +452,7 @@ final class RepoModel {
     /// The single most useful sync action for the toolbar button.
     func sync() async {
         guard !gitButlerBlocked else { return }
-        if status.upstream == nil || status.ahead > 0 && status.behind == 0 {
+        if !Self.upstreamMatches(branch: status.branch, upstream: status.upstream) || status.ahead > 0 && status.behind == 0 {
             await push()
         } else if status.behind > 0 {
             await pull()

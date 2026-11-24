@@ -298,3 +298,16 @@ extension GitRepositoryTests {
         #expect(subjects.contains("Merge") == (strategy == .merge))
     }
 }
+
+struct UpstreamMatchTests {
+    @Test func sameNamedUpstreamMatches() {
+        #expect(RepoModel.upstreamMatches(branch: "main", upstream: "origin/main"))
+        #expect(RepoModel.upstreamMatches(branch: "feature/x", upstream: "origin/feature/x"))
+    }
+
+    @Test func branchMadeFromMainDoesNotMatch() {
+        #expect(!RepoModel.upstreamMatches(branch: "feature/x", upstream: "origin/main"))
+        #expect(!RepoModel.upstreamMatches(branch: "main", upstream: nil))
+        #expect(!RepoModel.upstreamMatches(branch: nil, upstream: "origin/main"))
+    }
+}
