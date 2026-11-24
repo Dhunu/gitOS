@@ -75,8 +75,10 @@ GitOS checks for new versions when it opens and every hour while it's running, a
 background. When an update is ready, **Restart to Update** appears in the sidebar, the GitOS menu and
 **Settings › General**. Nothing installs until you click it: if you quit instead, the update downloads again
 next time. You can turn the automatic check off in **Settings › General**, or check yourself with
-**GitOS › Check for Updates…**. Your accounts and settings are kept. The first time you open a version that moves
-tokens out of the Keychain, macOS may ask one last time to let GitOS read them; if you deny it, sign in again.
+**GitOS › Check for Updates…** or the ⬇︎ button in the menu bar window. Both open a **Software Update**
+window that shows each step: checking, downloading, extracting, and ready to restart. Your accounts and settings
+are kept. The first time you open a version that moves tokens out of the Keychain, macOS may ask one last time to
+let GitOS read them; if you deny it, sign in again.
 
 You can also download the new `.dmg` from [Releases](https://github.com/Dhunu/gitOS/releases) and drag
 GitOS to Applications, choosing **Replace**.

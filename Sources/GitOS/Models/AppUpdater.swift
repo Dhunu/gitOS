@@ -32,8 +32,10 @@ final class AppUpdater: NSObject {
     @ObservationIgnored private var isUserInitiated = false
     @ObservationIgnored private var isCancelling = false
     @ObservationIgnored private var isQuitWaiting = false
-    @ObservationIgnored private var expectedBytes: UInt64 = 0
-    @ObservationIgnored private var receivedBytes: UInt64 = 0
+    private(set) var expectedBytes: UInt64 = 0
+    private(set) var receivedBytes: UInt64 = 0
+    /// How far Sparkle is through unpacking the download, while `phase` is `.preparing`.
+    private(set) var extractionFraction: Double?
 
     /// Pass false to test the update flow without a running updater.
     init(starting: Bool = true) {
@@ -178,6 +180,7 @@ extension AppUpdater: SPUUserDriver {
         MainActor.assumeIsolated {
             expectedBytes = 0
             receivedBytes = 0
+            extractionFraction = nil
             phase = .downloading(fraction: nil)
         }
     }
@@ -197,7 +200,9 @@ extension AppUpdater: SPUUserDriver {
         MainActor.assumeIsolated { phase = .preparing }
     }
 
-    nonisolated func showExtractionReceivedProgress(_ progress: Double) {}
+    nonisolated func showExtractionReceivedProgress(_ progress: Double) {
+        MainActor.assumeIsolated { extractionFraction = min(max(progress, 0), 1) }
+    }
 
     nonisolated func showReady(toInstallAndRelaunch reply: @escaping (SPUUserUpdateChoice) -> Void) {
         nonisolated(unsafe) let reply = reply
