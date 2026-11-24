@@ -200,8 +200,12 @@ struct GitRepository: Sendable {
         try await Git.run(["branch", "--set-upstream-to=\(upstream)", branch], in: url)
     }
 
-    func pull(context: GitContext) async throws {
-        try await Git.run(["pull", "--no-edit"], in: url, context: context)
+    /// Pulls the upstream. With no `strategy`, git follows the user's pull.rebase / pull.ff
+    /// settings, and fails with `isDivergentPull` when neither is set and both sides have commits.
+    func pull(context: GitContext, strategy: PullStrategy? = nil) async throws {
+        var args = ["pull", "--no-edit"]
+        if let strategy { args.append(strategy.flag) }
+        try await Git.run(args, in: url, context: context)
     }
 
     func push(remote: String, setUpstream: Bool, force: Bool = false, context: GitContext) async throws {

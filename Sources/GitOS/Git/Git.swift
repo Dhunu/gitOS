@@ -44,10 +44,26 @@ struct GitContext: Sendable {
     }
 }
 
+/// How to combine local and remote commits when a pull finds both sides have moved.
+enum PullStrategy: Sendable {
+    /// Keeps both histories and joins them with a merge commit.
+    case merge
+    /// Replays local commits on top of the remote's.
+    case rebase
+
+    var flag: String { self == .merge ? "--no-rebase" : "--rebase" }
+}
+
 struct GitFailure: LocalizedError, Sendable {
     let command: String
     let message: String
     let exitCode: Int32
+
+    /// git 2.27+ refuses to pull into a branch that has diverged from its upstream until it's told
+    /// whether to merge or rebase.
+    var isDivergentPull: Bool {
+        message.contains("divergent branches") || message.contains("Need to specify how to reconcile")
+    }
 
     var errorDescription: String? {
         message.isEmpty ? "git \(command) failed with exit code \(exitCode)" : message

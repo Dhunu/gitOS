@@ -84,6 +84,7 @@ extension GuideTopic {
             summary: "Keep repositories in sync with GitHub, by hand or in the background.",
             steps: [
                 "Use Fetch, Pull and Push in the repository toolbar. Each uses the repository's account.",
+                "If you and the remote both have new commits, Pull asks whether to merge (keeps both histories with a merge commit) or rebase (puts your commits on top of the remote's).",
                 "If unpushed commits were written with an email that isn't on the account, GitOS asks before pushing them.",
                 "Background fetch (Settings › General) keeps every repository fresh and can notify you about new commits.",
                 "Fetch every repository at once with Repository › Fetch All Repositories.",

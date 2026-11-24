@@ -43,6 +43,8 @@ final class RepoModel {
     var allPullRequestsLoaded = true
     var allIssuesLoaded = true
     var githubLoadedAt: Date?
+    /// Set when a pull found local and remote commits and needs to know whether to merge or rebase.
+    var divergentPull = false
     /// Merged and closed pull requests, loaded the first time someone looks at them.
     var closedPullRequests: [GitHubRepoAPI.PullRequest] = []
     var allClosedPullRequestsLoaded = true
@@ -341,11 +343,13 @@ final class RepoModel {
         return true
     }
 
-    func pull() async {
+    /// Pulls the upstream. When the branch and its upstream have both moved and git has no
+    /// pull.rebase setting, this asks (via `divergentPull`) instead of showing git's hint text.
+    func pull(strategy: PullStrategy? = nil) async {
         guard !gitButlerBlocked else { return }
         let context = app.gitContext(for: ref)
         guard status.upstream == nil else {
-            await perform("Pulling") { try await repo.pull(context: context) }
+            await perform(strategy == .rebase ? "Rebasing" : "Pulling") { try await pullAskingWhenDiverged(context, strategy) }
             return
         }
         // No tracking branch: link to <remote>/<branch> if the remote has it, otherwise explain.
@@ -362,7 +366,15 @@ final class RepoModel {
                                  exitCode: 1)
             }
             try await repo.setUpstream(of: branch, to: "\(remote)/\(branch)")
-            try await repo.pull(context: context)
+            try await pullAskingWhenDiverged(context, strategy)
+        }
+    }
+
+    private func pullAskingWhenDiverged(_ context: GitContext, _ strategy: PullStrategy?) async throws {
+        do {
+            try await repo.pull(context: context, strategy: strategy)
+        } catch let failure as GitFailure where failure.isDivergentPull && strategy == nil {
+            divergentPull = true
         }
     }
 

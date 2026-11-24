@@ -249,3 +249,52 @@ extension GitRepositoryTests {
         try await repo.pull(context: identity)
     }
 }
+
+extension GitRepositoryTests {
+    /// Both sides have a commit: a pull with no strategy (and no pull.rebase setting) is the
+    /// divergent-branches error, and merge or rebase then each bring in the remote's commit.
+    @Test(arguments: [PullStrategy.merge, .rebase])
+    func pullsDivergedBranches(_ strategy: PullStrategy) async throws {
+        try write("a.txt", "1\n")
+        try await repo.stage(["a.txt"])
+        try await repo.commit(message: "Base", context: identity)
+
+        let remoteDir = repo.url.path + "-remote.git"
+        let otherDir = repo.url.path + "-other"
+        let parent = repo.url.deletingLastPathComponent()
+        try await Git.run(["clone", "-q", "--bare", repo.url.path, remoteDir], in: parent)
+        try await Git.run(["remote", "add", "origin", remoteDir], in: repo.url)
+        try await Git.run(["fetch", "-q", "origin"], in: repo.url)
+        try await repo.setUpstream(of: "main", to: "origin/main")
+
+        // Someone else pushes a commit...
+        try await Git.run(["clone", "-q", remoteDir, otherDir], in: parent)
+        try "theirs\n".write(toFile: otherDir + "/b.txt", atomically: true, encoding: .utf8)
+        try await Git.run(["add", "b.txt"], in: URL(fileURLWithPath: otherDir))
+        try await Git.run(["commit", "-q", "-m", "Theirs"], in: URL(fileURLWithPath: otherDir), context: identity)
+        try await Git.run(["push", "-q", "origin", "main"], in: URL(fileURLWithPath: otherDir))
+        // ...while we commit locally.
+        try write("c.txt", "ours\n")
+        try await repo.stage(["c.txt"])
+        try await repo.commit(message: "Ours", context: identity)
+
+        // Only meaningful where git has no pull.rebase / pull.ff setting, as on a fresh install.
+        let rebaseSet = (try? await Git.run(["config", "--get", "pull.rebase"], in: repo.url)) != nil
+        let ffSet = (try? await Git.run(["config", "--get", "pull.ff"], in: repo.url)) != nil
+        let configured = rebaseSet || ffSet
+        if !configured {
+            do {
+                try await repo.pull(context: identity)
+                Issue.record("Expected the divergent-branches error")
+            } catch let failure as GitFailure {
+                #expect(failure.isDivergentPull)
+            }
+        }
+
+        try await repo.pull(context: identity, strategy: strategy)
+        #expect(FileManager.default.fileExists(atPath: repo.url.appendingPathComponent("b.txt").path))
+        let subjects = try await Git.run(["log", "--format=%s"], in: repo.url)
+        #expect(subjects.contains("Theirs") && subjects.contains("Ours"))
+        #expect(subjects.contains("Merge") == (strategy == .merge))
+    }
+}
