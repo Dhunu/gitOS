@@ -188,6 +188,7 @@ struct RepoView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(model.ref.name).font(.system(size: 15, weight: .semibold))
                 Text(model.status.branch ?? "detached HEAD").font(.caption).foregroundStyle(.secondary)
+                    .contextMenu { if let branch = model.status.branch { CopyBranchNameButton(name: branch) } }
             }
             .lineLimit(1)
             Spacer(minLength: 8)
@@ -568,6 +569,7 @@ private struct RepoStatusBar: View {
             HStack(spacing: 5) {
                 Circle().fill(Theme.head).frame(width: 7, height: 7)
                 Text(status.branch ?? "detached HEAD").foregroundStyle(.primary)
+                    .contextMenu { if let branch = status.branch { CopyBranchNameButton(name: branch) } }
             }
             if let upstream = status.upstream {
                 Text(upstream).foregroundStyle(.tertiary)

@@ -45,6 +45,9 @@ struct BranchPicker: View {
             }
         }
         .help("Switch branches")
+        .contextMenu {
+            if let branch = model.status.branch { CopyBranchNameButton(name: branch) }
+        }
         .background {
             Button("New Branch") { onNewBranch() }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
@@ -157,6 +160,7 @@ private struct BranchPickerContent: View {
                     .id(choice.id)
                     .onTapGesture { if !choice.isCurrent { choose(choice) } }
                     .onHover { if $0, !choice.isCurrent { highlighted = choice } }
+                    .contextMenu { CopyBranchNameButton(name: choice.name) }
             }
         }
     }
@@ -205,6 +209,18 @@ private struct BranchPickerContent: View {
             case .local(let branch): await model.switchBranch(branch.name)
             case .remote(let branch): await model.checkOut(branch)
             }
+        }
+    }
+}
+
+/// Context-menu item for any place that shows a branch name.
+struct CopyBranchNameButton: View {
+    let name: String
+
+    var body: some View {
+        Button("Copy Branch Name") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(name, forType: .string)
         }
     }
 }
