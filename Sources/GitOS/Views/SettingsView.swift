@@ -177,7 +177,7 @@ private struct AccountsSettings: View {
                 selection = nil
             }
         } message: { _ in
-            Text("Its token is deleted from the Keychain and folder rules that use it are removed.")
+            Text("Its token is deleted from GitOS and folder rules that use it are removed.")
         }
         .onAppear { if selection == nil { selection = app.accounts.first?.id } }
     }
@@ -310,7 +310,7 @@ struct SignInSheet: View {
                 Link("Create a Classic Token on GitHub", destination: GitHubDeviceFlow.classicTokenURL)
                 SecureField("Personal access token", text: $token, prompt: Text("ghp_…"))
                     .textFieldStyle(.roundedBorder)
-                Text("Stored in your Keychain. If the organization uses SSO, also choose **Configure SSO** next to the token on GitHub.")
+                Text("Stored encrypted in GitOS’s own data folder. If the organization uses SSO, also choose **Configure SSO** next to the token on GitHub.")
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -569,9 +569,9 @@ private struct AISettings: View {
         if hasKey {
             LabeledContent("API key") {
                 HStack {
-                    Text("Saved in Keychain").foregroundStyle(.secondary)
+                    Text("Saved").foregroundStyle(.secondary)
                     Button("Remove", role: .destructive) {
-                        Keychain.delete(Claude.keychainKey)
+                        SecretStore.shared.delete(Claude.secretKey)
                         hasKey = false
                     }
                 }
@@ -580,7 +580,7 @@ private struct AISettings: View {
             SecureField("Anthropic API key", text: $key, prompt: Text("sk-ant-…"))
             Button("Save Key") {
                 do {
-                    try Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), for: Claude.keychainKey)
+                    try SecretStore.shared.set(key.trimmingCharacters(in: .whitespacesAndNewlines), for: Claude.secretKey)
                     key = ""
                     hasKey = true
                     saveError = nil

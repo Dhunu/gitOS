@@ -4,7 +4,7 @@ extension RepoModel {
     /// API client for this repo's GitHub remote, using the repo's resolved account.
     var github: GitHubRepoAPI? {
         guard let remote = primaryRemote, remote.isGitHub, let owner = remote.owner, let name = remote.repo,
-              let account = resolved.account, let token = Keychain.get(account.id.uuidString) else { return nil }
+              let account = resolved.account, let token = SecretStore.shared.get(account.id.uuidString) else { return nil }
         return GitHubRepoAPI(api: GitHubAPI(token: token), owner: owner, repo: name)
     }
 

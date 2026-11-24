@@ -49,7 +49,7 @@ final class TokenRefresher {
     func refresh(_ account: Account, force: Bool) async -> Bool {
         if let task = running[account.id] { return await task.value }
         guard force || Self.isDue(expiresAt: account.tokenExpiresAt),
-              let refreshToken = Keychain.get(account.refreshTokenKey) else { return false }
+              let refreshToken = SecretStore.shared.get(account.refreshTokenKey) else { return false }
 
         let task = Task { await renew(account, refreshToken: refreshToken) }
         running[account.id] = task
