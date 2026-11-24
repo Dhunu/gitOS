@@ -98,7 +98,7 @@ GitOS to Applications, choosing **Replace**.
 ./scripts/build-app.sh            # → build/GitOS.app
 ./scripts/build-app.sh --install  # also copies to /Applications
 ./scripts/make-dmg.sh             # → build/GitOS-<version>.dmg to share
-./scripts/make-icon.sh            # re-renders Resources/AppIcon.icns
+./scripts/make-icon.sh            # re-renders Resources/AppIcon.icns from Resources/Brand/app-icon.svg
 ./scripts/release.sh 0.2.0        # publishes a GitHub Release that installed apps update to
 swift test                        # parser + real-git integration tests
 ```
