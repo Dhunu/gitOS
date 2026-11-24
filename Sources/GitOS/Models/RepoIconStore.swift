@@ -19,7 +19,7 @@ final class RepoIconStore {
         if let image = icons[repo.id] { return image }
         guard !inFlight.contains(repo.id), !missing.contains(repo.id) else { return nil }
         inFlight.insert(repo.id)
-        let token = account.flatMap { Keychain.get($0.id.uuidString) }
+        let token = account.flatMap { SecretStore.shared.get($0.id.uuidString) }
         Task { [weak self] in
             let image = await RepoIconLoader.icon(forRepoAt: repo.url, token: token)
             guard let self else { return }

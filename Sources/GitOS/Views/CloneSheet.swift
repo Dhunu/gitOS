@@ -182,7 +182,7 @@ struct AccountRepoPicker: View {
 
     private func load() async {
         selection = nil
-        guard let account, let token = Keychain.get(account.id.uuidString) else { repos = []; return }
+        guard let account, let token = SecretStore.shared.get(account.id.uuidString) else { repos = []; return }
         loading = true
         loadError = nil
         defer { loading = false }

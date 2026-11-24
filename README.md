@@ -65,8 +65,9 @@ everything back, and ⌘1–⌘6 switch tabs while the tab bar is hidden.
 CLI you're already signed in to, with no API key needed, or an Anthropic API key. To sign in, run `claude`
 or `codex login` in Terminal.
 
-Tokens live in the macOS Keychain. Account switching is done with per-command `-c` flags, so
-`~/.gitconfig` and your existing keychain entries are never modified.
+Tokens and API keys are saved encrypted in `~/Library/Application Support/GitOS` (readable only by your
+macOS user), not in the Keychain, so updates never ask for your Keychain password. Account switching is done
+with per-command `-c` flags, so `~/.gitconfig` and your existing keychain entries are never modified.
 
 ## Updating
 
@@ -74,8 +75,8 @@ GitOS checks for new versions when it opens and every hour while it's running, a
 background. When an update is ready, **Restart to Update** appears in the sidebar, the GitOS menu and
 **Settings › General**. Nothing installs until you click it: if you quit instead, the update downloads again
 next time. You can turn the automatic check off in **Settings › General**, or check yourself with
-**GitOS › Check for Updates…**. Your accounts and settings are kept. After an update, macOS may ask to let GitOS
-read its saved tokens from the Keychain: click **Always Allow**.
+**GitOS › Check for Updates…**. Your accounts and settings are kept. The first time you open a version that moves
+tokens out of the Keychain, macOS may ask one last time to let GitOS read them; if you deny it, sign in again.
 
 You can also download the new `.dmg` from [Releases](https://github.com/Dhunu/gitOS/releases) and drag
 GitOS to Applications, choosing **Replace**.
@@ -83,8 +84,9 @@ GitOS to Applications, choosing **Replace**.
 ## Uninstalling
 
 1. Delete `GitOS.app` from Applications.
-2. Delete `~/Library/Application Support/GitOS` to remove your settings.
-3. In **Keychain Access**, delete the items named **GitOS GitHub token**.
+2. Delete `~/Library/Application Support/GitOS` to remove your settings and saved tokens.
+3. If you used an older version and never opened a newer one, also delete the items named
+   **GitOS GitHub token** in **Keychain Access**.
 4. If you installed the `gitos` command, delete it from `/opt/homebrew/bin`, `/usr/local/bin` or
    `~/.local/bin`.
 

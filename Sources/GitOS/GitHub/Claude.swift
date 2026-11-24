@@ -2,7 +2,7 @@ import Foundation
 
 /// Minimal Claude Messages API client (raw HTTP; there is no official Swift SDK).
 enum Claude {
-    static let keychainKey = "anthropic-api-key"
+    static let secretKey = "anthropic-api-key"
     static let defaultModel = "claude-opus-5-5"
     static let models: [(id: String, name: String)] = [
         ("claude-opus-5-5", "Claude Opus 5.5"),
@@ -12,7 +12,7 @@ enum Claude {
     /// Inputs beyond this are refused rather than silently truncated.
     static let maxInputCharacters = 600_000
 
-    static var apiKey: String? { Keychain.get(keychainKey) }
+    static var apiKey: String? { SecretStore.shared.get(secretKey) }
 
     struct Failure: LocalizedError {
         let message: String

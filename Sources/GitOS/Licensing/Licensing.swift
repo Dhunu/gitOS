@@ -85,8 +85,12 @@ final class Licensing {
     private static let trialKey = "gitos.trial-ends"
 
     init() {
-        license = Keychain.get(Self.licenseKey).flatMap { try? JSONDecoder().decode(StoredLicense.self, from: Data($0.utf8)) }
-        if let saved = Keychain.get(Self.trialKey).flatMap(Double.init) {
+        license = SecretStore.shared.get(Self.licenseKey).flatMap { try? JSONDecoder().decode(StoredLicense.self, from: Data($0.utf8)) }
+        // The trial end is kept in two places and the earlier one wins, so deleting one file
+        // doesn't restart the trial. Anyone determined can still find both; this only stops the casual reset.
+        let saved = Self.earliest(SecretStore.shared.get(Self.trialKey).flatMap(Double.init),
+                                  UserDefaults.standard.object(forKey: Self.trialKey) as? Double)
+        if let saved {
             trialEndsAt = Date(timeIntervalSince1970: saved)
         } else {
             // First run of a build with Pro: a saved state file means they used GitOS before.
@@ -96,8 +100,10 @@ final class Licensing {
             let existing = FileManager.default.fileExists(atPath: stateFile.path)
             let days = existing ? Self.existingUserTrialDays : Self.trialDays
             trialEndsAt = Date().addingTimeInterval(TimeInterval(days) * 86_400)
-            try? Keychain.set(String(trialEndsAt.timeIntervalSince1970), for: Self.trialKey)
         }
+        // Writes back whichever copy was missing.
+        try? SecretStore.shared.set(String(trialEndsAt.timeIntervalSince1970), for: Self.trialKey)
+        UserDefaults.standard.set(trialEndsAt.timeIntervalSince1970, forKey: Self.trialKey)
         // Shows the app as a free user sees it (screenshots, support). It can only take Pro away.
         if ProcessInfo.processInfo.environment["GITOS_FORCE_FREE"] != nil { trialEndsAt = .distantPast }
     }
@@ -173,12 +179,14 @@ final class Licensing {
         } catch {}
     }
 
+    nonisolated static func earliest(_ dates: Double?...) -> Double? { dates.compactMap { $0 }.min() }
+
     private func store(_ license: StoredLicense?) {
         self.license = license
         if let license, let data = try? JSONEncoder().encode(license) {
-            try? Keychain.set(String(decoding: data, as: UTF8.self), for: Self.licenseKey)
+            try? SecretStore.shared.set(String(decoding: data, as: UTF8.self), for: Self.licenseKey)
         } else {
-            Keychain.delete(Self.licenseKey)
+            SecretStore.shared.delete(Self.licenseKey)
         }
         // A theme the user may no longer use falls back to the default, and back again.
         ThemeStore.shared.apply(AppState.shared.preferences)

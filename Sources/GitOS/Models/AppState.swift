@@ -131,7 +131,7 @@ final class AppState {
             authorEmail: account.commitEmail,
             signing: account.signing,
             githubUser: account.login,
-            githubToken: Keychain.get(account.id.uuidString)
+            githubToken: SecretStore.shared.get(account.id.uuidString)
         )
     }
 
@@ -182,11 +182,11 @@ final class AppState {
 
     /// Saves the tokens for `account`. The refresh token is single-use, so each grant replaces it.
     func store(_ grant: GitHubDeviceFlow.TokenGrant, for account: Account) throws {
-        try Keychain.set(grant.accessToken, for: account.id.uuidString)
+        try SecretStore.shared.set(grant.accessToken, for: account.id.uuidString)
         if let refreshToken = grant.refreshToken {
-            try Keychain.set(refreshToken, for: account.refreshTokenKey)
+            try SecretStore.shared.set(refreshToken, for: account.refreshTokenKey)
         } else {
-            Keychain.delete(account.refreshTokenKey)
+            SecretStore.shared.delete(account.refreshTokenKey)
         }
     }
 
@@ -218,15 +218,15 @@ final class AppState {
     func noteRejectedSignIn(_ error: Error, for repo: RepoRef) -> Bool {
         guard Self.isRejectedSignIn(error),
               let account = resolveAccount(for: repo).account,
-              Keychain.get(account.id.uuidString) != nil else { return false }
+              SecretStore.shared.get(account.id.uuidString) != nil else { return false }
         rejectedAccountIDs.insert(account.id)
         Task { await tokens.refresh(account, force: true) }
         return true
     }
 
     func removeAccount(_ account: Account) {
-        Keychain.delete(account.id.uuidString)
-        Keychain.delete(account.refreshTokenKey)
+        SecretStore.shared.delete(account.id.uuidString)
+        SecretStore.shared.delete(account.refreshTokenKey)
         rejectedAccountIDs.remove(account.id)
         accounts.removeAll { $0.id == account.id }
         rules.removeAll { $0.accountID == account.id }
