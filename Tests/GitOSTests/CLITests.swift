@@ -12,7 +12,7 @@ struct CLITests {
         // A worktree's .git is a file, so a plain file has to count too.
         FileManager.default.createFile(atPath: root.appendingPathComponent(".git").path, contents: Data("gitdir: x".utf8))
         defer { try? FileManager.default.removeItem(at: root) }
-        #expect(GitOSCLI.repositoryRoot(nested.path) == root.standardizedFileURL.path)
+        #expect(GitOSCLI.repositoryRoot(nested.path) == root.resolvingSymlinksInPath().path)
     }
 
     @Test func exportsQuoteValuesForTheShell() {
@@ -21,6 +21,35 @@ struct CLITests {
         #expect(exports.contains(#"export GIT_AUTHOR_NAME='Maya O'\''Neil'"#))
         #expect(exports.contains("export GIT_COMMITTER_EMAIL='maya@x.dev'"))
         #expect(exports.contains("export GH_TOKEN='tok'"))
+    }
+
+    @Test func treatsATokenAboutToExpireAsExpired() {
+        var account = Account(githubID: 1, login: "maya", displayName: "Maya", label: "", commitName: "Maya", commitEmail: "maya@x.dev")
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        account.tokenExpiresAt = now.addingTimeInterval(60)
+        #expect(GitOSCLI.isExpired(account, now: now))
+        account.tokenExpiresAt = now.addingTimeInterval(3_600)
+        #expect(!GitOSCLI.isExpired(account, now: now))
+        account.tokenExpiresAt = nil
+        #expect(!GitOSCLI.isExpired(account, now: now))
+    }
+
+    @Test func clearingUnsetsEverythingEnvSets() {
+        let set = GitOSCLI.exports(GitContext(authorName: "M", authorEmail: "m@x.dev", githubToken: "t"))
+        for name in ["GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL", "GH_TOKEN"] {
+            #expect(set.contains("export \(name)="))
+            #expect(GitOSCLI.clearExports.contains(name))
+        }
+    }
+
+    @Test func resolvesASymlinkedFolderToTheRealRepository() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("gitos-link-\(UUID())")
+        let real = tmp.appendingPathComponent("real")
+        try FileManager.default.createDirectory(at: real.appendingPathComponent(".git"), withIntermediateDirectories: true)
+        let link = tmp.appendingPathComponent("link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        #expect(GitOSCLI.repositoryRoot(link.path) == real.resolvingSymlinksInPath().path)
     }
 
     @Test func exportsNothingWithoutAnAccount() {
