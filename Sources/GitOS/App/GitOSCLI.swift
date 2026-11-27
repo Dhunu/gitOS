@@ -12,6 +12,10 @@ enum GitOSCLI {
         case "credential":
             return credential(app, operation: arguments.first ?? "")
         case "env":
+            guard app.preferences.shareAccountsWithGit else {
+                FileHandle.standardError.write(Data("gitos: turn on Settings › General › Let other apps use these accounts.\n".utf8))
+                return 1
+            }
             guard let resolved = resolve(app, path: arguments.first) else { return 0 }
             print(exports(app.gitContext(for: resolved.account)), terminator: "")
             return 0
@@ -31,7 +35,9 @@ enum GitOSCLI {
             guard let split = line.firstIndex(of: "=") else { continue }
             fields[String(line[..<split])] = String(line[line.index(after: split)...])
         }
-        guard operation == "get", fields["protocol"] == "https", fields["host"] == "github.com",
+        // Off by default: answering nothing lets git fall back to the user's other helpers.
+        guard app.preferences.shareAccountsWithGit,
+              operation == "get", fields["protocol"] == "https", fields["host"] == "github.com",
               let resolved = resolve(app, path: nil) else { return 0 }
         // Refresh tokens are single-use: refreshing here could race the app and sign the account out.
         if let expiresAt = resolved.account.tokenExpiresAt, expiresAt < .now {

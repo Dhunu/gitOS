@@ -58,7 +58,9 @@ and more), background fetch, notifications, the menu bar icon, and
 
 ### Use the same account from any git
 
-The `gitos` command also lets a terminal, an editor or a coding agent use the account GitOS picks for a folder:
+The `gitos` command also lets a terminal, an editor or a coding agent use the account GitOS picks for a folder. This is **off by default**: turn on **Settings › General › Let other apps use these accounts** first.
+Until then, `gitos env` refuses and `gitos credential` answers nothing, so git uses your usual credentials.
+
 
 - `gitos account [dir]` prints the account for that folder and why it was chosen.
 - `gitos env [dir]` prints shell exports (author name and email, `GH_TOKEN`). Run `eval "$(gitos env)"` so `gh`

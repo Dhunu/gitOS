@@ -42,3 +42,14 @@ struct CLITests {
         #expect(try String(contentsOfFile: theirs, encoding: .utf8) == "#!/bin/sh\necho someone else's gitos\n")
     }
 }
+
+@Suite("Sharing accounts with other git tools")
+struct ShareAccountsPreferenceTests {
+    @Test func isOffForNewAndOlderInstalls() throws {
+        #expect(Preferences().shareAccountsWithGit == false)
+        let older = try JSONDecoder().decode(Preferences.self, from: Data(#"{"backgroundFetch":false}"#.utf8))
+        #expect(older.shareAccountsWithGit == false)
+        let optedIn = try JSONDecoder().decode(Preferences.self, from: Data(#"{"shareAccountsWithGit":true}"#.utf8))
+        #expect(optedIn.shareAccountsWithGit)
+    }
+}

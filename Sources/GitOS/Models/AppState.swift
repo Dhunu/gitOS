@@ -11,6 +11,8 @@ struct Preferences: Codable, Equatable, Sendable {
     var aiProvider = AIProvider.claudeCode
     var themeID = ThemePalette.gitOS.id
     var windowStyle = WindowStyle.glass
+    /// Opt-in: `gitos credential` and `gitos env` hand this Mac's other git tools the folder's account.
+    var shareAccountsWithGit = false
 
     init() {}
 
@@ -26,6 +28,7 @@ struct Preferences: Codable, Equatable, Sendable {
         aiProvider = try c.decodeIfPresent(AIProvider.self, forKey: .aiProvider) ?? d.aiProvider
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? d.themeID
         windowStyle = (try? c.decodeIfPresent(WindowStyle.self, forKey: .windowStyle)) ?? d.windowStyle
+        shareAccountsWithGit = try c.decodeIfPresent(Bool.self, forKey: .shareAccountsWithGit) ?? d.shareAccountsWithGit
     }
 }
 
