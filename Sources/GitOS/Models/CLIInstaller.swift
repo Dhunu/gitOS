@@ -33,6 +33,14 @@ enum CLIInstaller {
             .first { FileManager.default.fileExists(atPath: $0) }
     }
 
+    /// Rewrites an older `gitos` script GitOS installed so it forwards new commands; leaves anyone else's file alone.
+    @discardableResult
+    static func refreshIfOutdated(at path: String? = installedPath) -> Bool {
+        guard let path, let current = try? String(contentsOfFile: path, encoding: .utf8), current != script,
+              current.hasPrefix("#!/bin/sh\n# Opens a git repository in GitOS") else { return false }
+        return (try? script.write(toFile: path, atomically: true, encoding: .utf8)) != nil
+    }
+
     /// Writes the script to the first writable candidate and returns its path.
     static func install() throws -> String {
         let fm = FileManager.default

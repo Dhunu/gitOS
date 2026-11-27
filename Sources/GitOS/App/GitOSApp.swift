@@ -77,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             UNUserNotificationCenter.current().delegate = self
         }
         _ = AppUpdater.shared  // Checks for updates now, then every hour.
+        CLIInstaller.refreshIfOutdated()
     }
 
     /// Quitting must not install a downloaded update, because only Restart to Update should.

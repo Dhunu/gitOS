@@ -26,4 +26,19 @@ struct CLITests {
     @Test func exportsNothingWithoutAnAccount() {
         #expect(GitOSCLI.exports(.none).isEmpty)
     }
+
+    @Test func refreshesOnlyAnOutdatedScriptGitOSInstalled() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("gitos-script-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let ours = dir.appendingPathComponent("ours").path, theirs = dir.appendingPathComponent("theirs").path
+        try "#!/bin/sh\n# Opens a git repository in GitOS. Usage: gitos [path]\nexec open .\n".write(toFile: ours, atomically: true, encoding: .utf8)
+        try "#!/bin/sh\necho someone else's gitos\n".write(toFile: theirs, atomically: true, encoding: .utf8)
+
+        #expect(CLIInstaller.refreshIfOutdated(at: ours))
+        #expect(try String(contentsOfFile: ours, encoding: .utf8) == CLIInstaller.script)
+        #expect(!CLIInstaller.refreshIfOutdated(at: ours))  // Already current.
+        #expect(!CLIInstaller.refreshIfOutdated(at: theirs))
+        #expect(try String(contentsOfFile: theirs, encoding: .utf8) == "#!/bin/sh\necho someone else's gitos\n")
+    }
 }

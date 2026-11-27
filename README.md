@@ -56,6 +56,23 @@ Settings › General has themes (Monokai, Tokyo Night, Dracula, One Dark Pro, Gi
 and more), background fetch, notifications, the menu bar icon, and
 **Install gitos Command** (then `gitos .` in any repo opens it in GitOS).
 
+### Use the same account from any git
+
+The `gitos` command also lets a terminal, an editor or a coding agent use the account GitOS picks for a folder:
+
+- `gitos account [dir]` prints the account for that folder and why it was chosen.
+- `gitos env [dir]` prints shell exports (author name and email, `GH_TOKEN`). Run `eval "$(gitos env)"` so `gh`
+  uses the same account.
+- `gitos credential get|store|erase` is a git credential helper. Set it up once:
+
+  ```sh
+  git config --global credential.https://github.com.helper '!gitos credential'
+  ```
+
+Only `https://github.com` is affected; other hosts keep your existing credential helpers. The command never
+refreshes tokens (GitOS does that), so if it reports an expired token, open GitOS and try again.
+Updating GitOS also updates an installed `gitos` command.
+
 **Focus mode** (⇧⌘F, or the expand button on any detail pane) gives the pane you're reading — a file's
 diff, the conflict editor, a commit, pull request, issue or stash — the whole window. Esc brings
 everything back, and ⌘1–⌘6 switch tabs while the tab bar is hidden.
