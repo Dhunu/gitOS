@@ -16,7 +16,16 @@ enum GitOSCLI {
                 FileHandle.standardError.write(Data("gitos: turn on Settings › General › Let other apps use these accounts.\n".utf8))
                 return 1
             }
-            guard let resolved = resolve(app, path: arguments.first) else { return 0 }
+            guard let resolved = resolve(app, path: arguments.first) else {
+                // No account here: clear what an earlier `eval "$(gitos env)"` set for another folder.
+                print(clearExports, terminator: "")
+                return 0
+            }
+            if isExpired(resolved.account) {
+                FileHandle.standardError.write(Data("gitos: @\(resolved.account.login)'s token expired; open GitOS to renew it.\n".utf8))
+                print(clearExports, terminator: "")
+                return 1
+            }
             print(exports(app.gitContext(for: resolved.account)), terminator: "")
             return 0
         default:
@@ -39,8 +48,11 @@ enum GitOSCLI {
         guard app.preferences.shareAccountsWithGit,
               operation == "get", fields["protocol"] == "https", fields["host"] == "github.com",
               let resolved = resolve(app, path: nil) else { return 0 }
+        // Git asked for a specific user that isn't this folder's account: let another helper answer.
+        if let username = fields["username"], !username.isEmpty,
+           username.caseInsensitiveCompare(resolved.account.login) != .orderedSame { return 0 }
         // Refresh tokens are single-use: refreshing here could race the app and sign the account out.
-        if let expiresAt = resolved.account.tokenExpiresAt, expiresAt < .now {
+        if isExpired(resolved.account) {
             FileHandle.standardError.write(Data("gitos: @\(resolved.account.login)'s token expired; open GitOS to renew it.\n".utf8))
             return 0
         }
@@ -57,12 +69,25 @@ enum GitOSCLI {
 
     /// A known repository keeps its per-repo override; any other folder goes through the rules.
     private static func repoRef(_ app: AppState, path: String) -> RepoRef {
-        app.repos.first { $0.path == path } ?? RepoRef(path: path)
+        app.repos.first { resolvedPath($0.path) == path } ?? RepoRef(path: path)
     }
+
+    private static func resolvedPath(_ path: String) -> String {
+        URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    /// Expired, or about to be: a fetch started now shouldn't outlive the token.
+    static func isExpired(_ account: Account, now: Date = .now) -> Bool {
+        guard let expiresAt = account.tokenExpiresAt else { return false }
+        return expiresAt < now.addingTimeInterval(5 * 60)
+    }
+
+    static let clearExports = "unset GIT_AUTHOR_NAME GIT_COMMITTER_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_EMAIL GH_TOKEN\n"
 
     /// The nearest folder holding `.git` (a directory, or a file in worktrees), else the folder itself.
     static func repositoryRoot(_ path: String?) -> String {
-        let start = URL(fileURLWithPath: path ?? FileManager.default.currentDirectoryPath).standardizedFileURL
+        let start = URL(fileURLWithPath: path ?? FileManager.default.currentDirectoryPath)
+            .standardizedFileURL.resolvingSymlinksInPath()
         var url = start
         while url.path != "/" {
             if FileManager.default.fileExists(atPath: url.appendingPathComponent(".git").path) { return url.path }

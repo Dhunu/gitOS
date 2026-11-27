@@ -25,6 +25,10 @@ final class SecretStore: Sendable {
         func delete(_ keys: [String])
     }
 
+    /// Set by the `gitos` CLI: it reads secrets but never writes. Its copy is loaded when it starts, so a
+    /// save could undo a token the app refreshed meanwhile, and refresh tokens are single-use.
+    static let readOnly = Mutex(false)
+
     let directory: URL
     private let legacy: Legacy?
     private let cache = Mutex<[String: String]?>(nil)
@@ -43,6 +47,7 @@ final class SecretStore: Sendable {
     }
 
     func set(_ value: String, for key: String) throws {
+        if Self.readOnly.withLock({ $0 }) { return }
         try cache.withLock {
             var values = loaded(&$0)
             values[key] = value
@@ -52,6 +57,7 @@ final class SecretStore: Sendable {
     }
 
     func delete(_ key: String) {
+        if Self.readOnly.withLock({ $0 }) { return }
         cache.withLock {
             var values = loaded(&$0)
             guard values.removeValue(forKey: key) != nil else { return }
@@ -63,7 +69,7 @@ final class SecretStore: Sendable {
     private func loaded(_ cache: inout [String: String]?) -> [String: String] {
         if let cache { return cache }
         var values = read()
-        migrate(into: &values)
+        if !Self.readOnly.withLock({ $0 }) { migrate(into: &values) }
         cache = values
         return values
     }
