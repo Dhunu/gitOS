@@ -82,6 +82,8 @@ private struct GeneralSettings: View {
                 }
                 Text("Run `gitos .` in any repository to open it here.")
                     .font(.caption).foregroundStyle(.secondary)
+                Toggle("Let other apps use these accounts", isOn: $app.preferences.shareAccountsWithGit)
+                ShareAccountsExplanation(isOn: app.preferences.shareAccountsWithGit)
             }
         }
         .formStyle(.grouped)
@@ -591,5 +593,30 @@ private struct AISettings: View {
             .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
             if let saveError { Text(saveError).foregroundStyle(Theme.removed).font(.caption) }
         }
+    }
+}
+
+/// Explains the opt-in that lets other git tools use GitOS's per-folder accounts.
+private struct ShareAccountsExplanation: View {
+    let isOn: Bool
+    private static let helperCommand = "git config --global credential.https://github.com.helper '!gitos credential'"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Use this if you work with several GitHub accounts outside GitOS too: in Terminal, a code editor, or a coding agent. Those tools then push and commit as the account GitOS picks for each folder (its folder rules), not whichever account git signed in to last.")
+            Text("When git asks, the `gitos` command gives it that folder's GitHub sign-in and commit name and email. It works only for github.com and only when this switch is on. GitOS keeps the tokens; it never writes to your Keychain or ~/.gitconfig.")
+            if isOn {
+                Text("One-time setup: tell git to ask GitOS. Run this in Terminal:")
+                HStack(alignment: .firstTextBaseline) {
+                    Text(Self.helperCommand).monospaced().textSelection(.enabled)
+                    Button("Copy") { copyToPasteboard(Self.helperCommand) }.controlSize(.small)
+                }
+                Text("For the gh command, run `eval \"$(gitos env)\"` in the repository first. To undo, turn this off or run `git config --global --unset credential.https://github.com.helper`.")
+            } else {
+                Text("Off: only GitOS's own git commands use these accounts, and `gitos credential` answers nothing, so git uses your usual sign-in.")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
 }
