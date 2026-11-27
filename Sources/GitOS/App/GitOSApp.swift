@@ -1,7 +1,6 @@
 import SwiftUI
 import UserNotifications
 
-@main
 struct GitOSApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var app = AppState.shared
